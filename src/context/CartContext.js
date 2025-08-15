@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createAuthenticatedAxios, endpoints } from '../utils/axiosConfig';
 
 const CartContext = createContext();
 
@@ -13,366 +14,326 @@ export const useCart = () => {
 export const CartProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [lastSync, setLastSync] = useState(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
-  // Constants
-  const CART_STORAGE_KEY = 'pharmacy_cart';
-  const CART_SYNC_KEY = 'pharmacy_cart_sync';
-  const MAX_CART_ITEMS = 50; // Giới hạn số lượng sản phẩm trong giỏ
+  // Helper to check if user is logged in
+  const isUserLoggedIn = useCallback(() => {
+    return !!(localStorage.getItem('token') || localStorage.getItem('userToken'));
+  }, []);
 
-  // Load cart from localStorage with error handling
-  const loadCartFromStorage = useCallback(() => {
+  // Sync cart with backend
+  const syncCartWithBackend = useCallback(async () => {
+    if (!isUserLoggedIn()) return;
+
     try {
-      // Check if user is logged in
-      const userToken = localStorage.getItem('userToken');
-      if (!userToken) {
+      setIsSyncing(true);
+      const api = createAuthenticatedAxios();
+      const response = await api.get(endpoints['my-cart']);
+      
+      let cartData = [];
+      if (response.data?.items && Array.isArray(response.data.items)) {
+        cartData = response.data.items;
+      } else if (Array.isArray(response.data)) {
+        cartData = response.data;
+      }
+      
+      if (cartData.length >= 0) {
+        const backendItems = cartData.map(item => ({
+          id: item.medicine,
+          name: item.medicine_name || 'Sản phẩm không có tên',
+          price: item.medicine_price || 0,
+          quantity: item.quantity || 1,
+          total_price: item.total_price || 0,
+          selected: true,
+          image: item.medicine_images?.[0]?.imgMedicineUrl,
+          genre: item.medicine_genre || "Không xác định",
+          produce: item.medicine_produce || "Không xác định",
+          cartItemId: item.id
+        }));
+        
+        setCartItems(backendItems);
+      }
+    } catch (error) {
+      console.error('Error syncing cart:', error);
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [isUserLoggedIn]);
+
+  // Load cart when component mounts
+  useEffect(() => {
+    const initCart = async () => {
+      const token = localStorage.getItem('token') || localStorage.getItem('userToken');
+      if (!token) {
         setCartItems([]);
         setIsLoading(false);
         return;
       }
-
-      const savedCart = localStorage.getItem(CART_STORAGE_KEY);
-      const savedSync = localStorage.getItem(CART_SYNC_KEY);
       
-      if (savedCart) {
-        const parsedCart = JSON.parse(savedCart);
-        // Validate cart data structure
-        if (Array.isArray(parsedCart)) {
-          setCartItems(parsedCart.slice(0, MAX_CART_ITEMS)); // Limit items
-        }
-      }
-      
-      if (savedSync) {
-        setLastSync(new Date(savedSync));
-      }
-    } catch (error) {
-      console.error('Error loading cart from localStorage:', error);
-      // Clear corrupted data
-      localStorage.removeItem(CART_STORAGE_KEY);
-      localStorage.removeItem(CART_SYNC_KEY);
-      setCartItems([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  // Save cart to localStorage with error handling
-  const saveCartToStorage = useCallback((items) => {
-    try {
-      // Check if user is logged in
-      const userToken = localStorage.getItem('userToken');
-      if (!userToken) {
-        return;
-      }
-
-      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
-      localStorage.setItem(CART_SYNC_KEY, new Date().toISOString());
-      setLastSync(new Date());
-    } catch (error) {
-      console.error('Error saving cart to localStorage:', error);
-      // Handle storage quota exceeded
-      if (error.name === 'QuotaExceededError') {
-        // Clear old data and try again
-        localStorage.clear();
-        try {
-          localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
-        } catch (retryError) {
-          console.error('Failed to save cart after clearing storage:', retryError);
-        }
-      }
-    }
-  }, []);
-
-  // Load cart when component mounts
-  useEffect(() => {
-    loadCartFromStorage();
-  }, [loadCartFromStorage]);
-
-  // Save cart whenever cartItems changes
-  useEffect(() => {
-    if (!isLoading && cartItems.length >= 0) {
-      saveCartToStorage(cartItems);
-    }
-  }, [cartItems, isLoading, saveCartToStorage]);
-
-  // Listen for storage changes (sync across tabs)
-  useEffect(() => {
-    const handleStorageChange = (e) => {
-      if (e.key === CART_STORAGE_KEY && e.newValue) {
-        try {
-          const newCart = JSON.parse(e.newValue);
-          if (Array.isArray(newCart)) {
-            setCartItems(newCart);
-          }
-        } catch (error) {
-          console.error('Error syncing cart across tabs:', error);
-        }
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
-
-  // Clear cart when user logs out
-  useEffect(() => {
-    const checkAuthStatus = () => {
-      const userToken = localStorage.getItem('userToken');
-      if (!userToken) {
-        // User is logged out, clear cart
+      try {
+        setIsLoading(true);
+        await syncCartWithBackend();
+      } catch (error) {
+        console.error('Error loading cart:', error);
         setCartItems([]);
-        try {
-          localStorage.removeItem(CART_STORAGE_KEY);
-          localStorage.removeItem(CART_SYNC_KEY);
-        } catch (error) {
-          console.error('Error clearing cart on logout:', error);
-        }
-        setLastSync(null);
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    // Check immediately
-    checkAuthStatus();
+    initCart();
+  }, [syncCartWithBackend]);
 
-    // Listen for storage changes to detect logout
-    const handleStorageChange = (e) => {
-      if (e.key === 'userToken') {
-        checkAuthStatus();
+  // Auto-sync when user logs in
+  useEffect(() => {
+    let lastAuthState = !!(localStorage.getItem('token') || localStorage.getItem('userToken'));
+    
+    const checkAuthChange = () => {
+      const currentAuthState = !!(localStorage.getItem('token') || localStorage.getItem('userToken'));
+      
+      // If user just logged in
+      if (!lastAuthState && currentAuthState && !isLoading && !isSyncing) {
+        console.log('User just logged in, syncing cart...');
+        syncCartWithBackend();
       }
+      
+      // If user logged out
+      if (lastAuthState && !currentAuthState) {
+        setCartItems([]);
+      }
+      
+      lastAuthState = currentAuthState;
     };
 
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
+    const interval = setInterval(checkAuthChange, 1000);
+    return () => clearInterval(interval);
+  }, [isLoading, isSyncing, syncCartWithBackend]);
 
-  // Add item to cart with validation
-  const addToCart = useCallback((medicine, quantity = 1) => {
-    // Check if user is logged in
-    const userToken = localStorage.getItem('userToken');
-    if (!userToken) {
+  // Add item to cart
+  const addToCart = useCallback(async (medicine, quantity = 1) => {
+    if (!isUserLoggedIn()) {
       return { success: false, message: 'Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng' };
     }
 
-    if (!medicine || !medicine.id) {
-      console.error('Invalid medicine data');
+    if (!medicine?.id || quantity <= 0 || quantity > 99) {
       return { success: false, message: 'Dữ liệu sản phẩm không hợp lệ' };
     }
 
-    if (quantity <= 0 || quantity > 99) {
-      return { success: false, message: 'Số lượng không hợp lệ' };
-    }
+    try {
+      setIsSyncing(true);
+      const api = createAuthenticatedAxios();
+      const response = await api.post(endpoints['add-to-cart'], {
+        medicine: medicine.id,
+        quantity: quantity
+      });
 
-    setCartItems(prevItems => {
-      // Check cart size limit
-      if (prevItems.length >= MAX_CART_ITEMS) {
-        return prevItems;
-      }
-
-      const existingItem = prevItems.find(item => item.id === medicine.id);
-      
-      if (existingItem) {
-        // Update quantity if item already exists
-        const newQuantity = existingItem.quantity + quantity;
-        if (newQuantity > 99) {
-          return prevItems; // Don't exceed max quantity per item
-        }
+      // Update local state
+      setCartItems(prevItems => {
+        const existingItem = prevItems.find(item => item.id === medicine.id);
         
-        return prevItems.map(item =>
-          item.id === medicine.id
-            ? { ...item, quantity: newQuantity }
-            : item
-        );
-      } else {
-        // Add new item
-        const newItem = {
-          id: medicine.id,
-          name: medicine.name || 'Sản phẩm không có tên',
-          price: medicine.price || 0,
-          quantity: quantity,
-          selected: true, // Mặc định chọn sản phẩm mới thêm
-          image: medicine.images && medicine.images.length > 0 
-            ? medicine.images[0].imgMedicineUrl 
-            : "https://via.placeholder.com/100x100?text=No+Image",
-          genre: medicine.medicineGenre?.name || "Không xác định",
-          produce: medicine.produce?.name || "Không xác định",
-          addedAt: new Date().toISOString()
-        };
-        return [...prevItems, newItem];
-      }
-    });
+        if (existingItem) {
+          const newQuantity = existingItem.quantity + quantity;
+          if (newQuantity > 99) return prevItems;
+          
+          return prevItems.map(item =>
+            item.id === medicine.id
+              ? { ...item, quantity: newQuantity, total_price: response.data?.total_price || ((item.price || 0) * newQuantity) }
+              : item
+          );
+        } else {
+          const newItem = {
+            id: medicine.id,
+            name: medicine.name || 'Sản phẩm không có tên',
+            price: medicine.price || 0,
+            quantity: quantity,
+            total_price: response.data?.total_price || ((medicine.price || 0) * quantity),
+            selected: true,
+            image: medicine.images?.[0]?.imgMedicineUrl,
+            genre: medicine.medicineGenre?.name || "Không xác định",
+            produce: medicine.produce?.name || "Không xác định",
+            cartItemId: response.data?.id
+          };
+          return [...prevItems, newItem];
+        }
+      });
 
-    return { success: true, message: 'Đã thêm vào giỏ hàng' };
-  }, []);
+      return { success: true, message: 'Đã thêm vào giỏ hàng' };
+    } catch (error) {
+      return { success: false, message: 'Lỗi khi thêm vào giỏ hàng' };
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [isUserLoggedIn]);
 
-  // Update item quantity with validation
-  const updateQuantity = useCallback((id, newQuantity) => {
-    // Check if user is logged in
-    const userToken = localStorage.getItem('userToken');
-    if (!userToken) {
+  // Update quantity
+  const updateQuantity = useCallback(async (id, newQuantity) => {
+    if (!isUserLoggedIn()) {
       return { success: false, message: 'Vui lòng đăng nhập để cập nhật giỏ hàng' };
     }
 
-    if (newQuantity <= 0) {
-      setCartItems(prevItems => prevItems.filter(item => item.id !== id));
-      return;
+    const cartItem = cartItems.find(item => item.id === id);
+    if (!cartItem?.cartItemId) {
+      return { success: false, message: 'Không tìm thấy sản phẩm trong giỏ hàng' };
     }
 
-    if (newQuantity > 99) {
-      return { success: false, message: 'Số lượng tối đa là 99' };
+    try {
+      // Update UI optimistically first
+      if (newQuantity <= 0) {
+        setCartItems(prevItems => prevItems.filter(item => item.id !== id));
+      } else if (newQuantity <= 99) {
+        setCartItems(prevItems =>
+          prevItems.map(item =>
+            item.id === id ? { ...item, quantity: newQuantity, total_price: (item.price || 0) * newQuantity } : item
+          )
+        );
+      } else {
+        return { success: false, message: 'Số lượng tối đa là 99' };
+      }
+
+      // Then sync with backend
+      setIsSyncing(true);
+      const api = createAuthenticatedAxios();
+      
+      if (newQuantity <= 0) {
+        await api.delete(`${endpoints['cart-items']}${cartItem.cartItemId}/`);
+        return { success: true, message: 'Đã xóa sản phẩm khỏi giỏ hàng' };
+      } else {
+        const url = endpoints['update-cart-quantity'].replace('{itemId}', cartItem.cartItemId);
+        await api.patch(url, { quantity: newQuantity });
+      }
+
+      return { success: true };
+    } catch (error) {
+      // Revert optimistic update on error
+      await syncCartWithBackend();
+      return { success: false, message: 'Lỗi khi cập nhật số lượng' };
+    } finally {
+      setIsSyncing(false);
     }
-
-    setCartItems(prevItems =>
-      prevItems.map(item =>
-        item.id === id ? { ...item, quantity: newQuantity } : item
-      )
-    );
-
-    return { success: true };
-  }, []);
+  }, [cartItems, isUserLoggedIn, syncCartWithBackend]);
 
   // Remove item from cart
-  const removeFromCart = useCallback((id) => {
-    // Check if user is logged in
-    const userToken = localStorage.getItem('userToken');
-    if (!userToken) {
+  const removeFromCart = useCallback(async (id) => {
+    if (!isUserLoggedIn()) {
       return { success: false, message: 'Vui lòng đăng nhập để xóa sản phẩm khỏi giỏ hàng' };
     }
 
-    setCartItems(prevItems => prevItems.filter(item => item.id !== id));
-    return { success: true, message: 'Đã xóa khỏi giỏ hàng' };
-  }, []);
+    try {
+      setIsSyncing(true);
+      const cartItem = cartItems.find(item => item.id === id);
+      if (!cartItem?.cartItemId) {
+        return { success: false, message: 'Không tìm thấy sản phẩm trong giỏ hàng' };
+      }
+
+      const api = createAuthenticatedAxios();
+      await api.delete(`${endpoints['cart-items']}${cartItem.cartItemId}/`);
+      setCartItems(prevItems => prevItems.filter(item => item.id !== id));
+      return { success: true, message: 'Đã xóa khỏi giỏ hàng' };
+    } catch (error) {
+      return { success: false, message: 'Lỗi khi xóa sản phẩm' };
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [cartItems, isUserLoggedIn]);
 
   // Clear entire cart
-  const clearCart = useCallback(() => {
-    setCartItems([]);
-    return { success: true, message: 'Đã xóa toàn bộ giỏ hàng' };
-  }, []);
+  const clearCart = useCallback(async () => {
+    if (!isUserLoggedIn()) {
+      setCartItems([]);
+      return { success: true, message: 'Đã xóa toàn bộ giỏ hàng' };
+    }
 
-  // Get total items count
+    try {
+      setIsSyncing(true);
+      const api = createAuthenticatedAxios();
+      const deletePromises = cartItems.map(item => {
+        if (item.cartItemId) {
+          return api.delete(`${endpoints['cart-items']}${item.cartItemId}/`);
+        }
+        return Promise.resolve();
+      });
+
+      await Promise.all(deletePromises);
+      setCartItems([]);
+      return { success: true, message: 'Đã xóa toàn bộ giỏ hàng' };
+    } catch (error) {
+      setCartItems([]);
+      return { success: true, message: 'Đã xóa toàn bộ giỏ hàng (có lỗi đồng bộ)' };
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [cartItems, isUserLoggedIn]);
+
+  // Utility functions
   const getTotalItems = useCallback(() => {
     return cartItems.reduce((sum, item) => sum + item.quantity, 0);
   }, [cartItems]);
 
-  // Get total amount
   const getTotalAmount = useCallback(() => {
-    return cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    return cartItems.reduce((sum, item) => {
+      const itemTotal = item.total_price !== undefined ? item.total_price : ((item.price || 0) * item.quantity);
+      return sum + itemTotal;
+    }, 0);
   }, [cartItems]);
 
-  // Get selected items total amount
   const getSelectedAmount = useCallback(() => {
-    return cartItems
-      .filter(item => item.selected)
-      .reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    return cartItems.filter(item => item.selected).reduce((sum, item) => {
+      const itemTotal = item.total_price !== undefined ? item.total_price : ((item.price || 0) * item.quantity);
+      return sum + itemTotal;
+    }, 0);
   }, [cartItems]);
 
-  // Get selected items count
   const getSelectedItems = useCallback(() => {
-    return cartItems
-      .filter(item => item.selected)
-      .reduce((sum, item) => sum + item.quantity, 0);
+    return cartItems.filter(item => item.selected).reduce((sum, item) => sum + item.quantity, 0);
   }, [cartItems]);
 
-  // Toggle item selection
   const toggleItemSelection = useCallback((id) => {
-    // Check if user is logged in
-    const userToken = localStorage.getItem('userToken');
-    if (!userToken) {
-      return;
-    }
-
+    if (!isUserLoggedIn()) return;
     setCartItems(prevItems =>
-      prevItems.map(item =>
-        item.id === id ? { ...item, selected: !item.selected } : item
-      )
+      prevItems.map(item => item.id === id ? { ...item, selected: !item.selected } : item)
     );
-  }, []);
+  }, [isUserLoggedIn]);
 
-  // Select all items
   const selectAllItems = useCallback((selected = true) => {
-    // Check if user is logged in
-    const userToken = localStorage.getItem('userToken');
-    if (!userToken) {
-      return;
-    }
+    if (!isUserLoggedIn()) return;
+    setCartItems(prevItems => prevItems.map(item => ({ ...item, selected })));
+  }, [isUserLoggedIn]);
 
-    setCartItems(prevItems =>
-      prevItems.map(item => ({ ...item, selected }))
-    );
-  }, []);
-
-  // Check if all items are selected
   const isAllSelected = useCallback(() => {
     return cartItems.length > 0 && cartItems.every(item => item.selected);
   }, [cartItems]);
 
-  // Get selected cart items
   const getSelectedCartItems = useCallback(() => {
     return cartItems.filter(item => item.selected);
   }, [cartItems]);
 
-  // Check if item is in cart
   const isInCart = useCallback((id) => {
     return cartItems.some(item => item.id === id);
   }, [cartItems]);
 
-  // Get item quantity in cart
   const getItemQuantity = useCallback((id) => {
     const item = cartItems.find(item => item.id === id);
     return item ? item.quantity : 0;
   }, [cartItems]);
 
-  // Get cart summary
-  const getCartSummary = useCallback(() => {
-    return {
-      totalItems: getTotalItems(),
-      totalAmount: getTotalAmount(),
-      itemCount: cartItems.length,
-      lastSync: lastSync,
-      isEmpty: cartItems.length === 0
-    };
-  }, [cartItems, getTotalItems, getTotalAmount, lastSync]);
-
-  // Export cart data (for backup/sync)
-  const exportCart = useCallback(() => {
-    return {
-      items: cartItems,
-      timestamp: new Date().toISOString(),
-      version: '1.0'
-    };
-  }, [cartItems]);
-
-  // Import cart data (for restore/sync)
-  const importCart = useCallback((cartData) => {
-    try {
-      if (cartData && Array.isArray(cartData.items)) {
-        setCartItems(cartData.items.slice(0, MAX_CART_ITEMS));
-        return { success: true, message: 'Đã khôi phục giỏ hàng' };
-      }
-      return { success: false, message: 'Dữ liệu giỏ hàng không hợp lệ' };
-    } catch (error) {
-      console.error('Error importing cart:', error);
-      return { success: false, message: 'Lỗi khi khôi phục giỏ hàng' };
-    }
-  }, []);
-
   const value = {
     // State
     cartItems,
     isLoading,
-    lastSync,
+    isSyncing,
     
     // Actions
     addToCart,
     updateQuantity,
     removeFromCart,
     clearCart,
+    syncCartWithBackend,
     
     // Getters
     getTotalItems,
     getTotalAmount,
     isInCart,
     getItemQuantity,
-    getCartSummary,
     
     // Selection functions
     getSelectedAmount,
@@ -380,14 +341,7 @@ export const CartProvider = ({ children }) => {
     toggleItemSelection,
     selectAllItems,
     isAllSelected,
-    getSelectedCartItems,
-    
-    // Advanced features
-    exportCart,
-    importCart,
-    
-    // Constants
-    MAX_CART_ITEMS
+    getSelectedCartItems
   };
 
   return (

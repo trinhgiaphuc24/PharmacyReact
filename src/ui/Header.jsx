@@ -2,27 +2,25 @@ import React, { useState, useEffect } from "react";
 import { Search, Bell, ShoppingCart, User, Menu, ChevronDown, Package } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
 import axios, { endpoints } from "../utils/axiosConfig";
 
 const Header = ({ searchQuery, setSearchQuery, medicineGenres = [], onSearchSubmit }) => {
   const navigate = useNavigate();
   const { getTotalItems } = useCart();
+  const { user, isAuthenticated, isStaff, isCustomer, logout } = useAuth();
   const cartCount = getTotalItems();
   const [showMedicineGenreMenu, setShowMedicineGenreMenu] = useState(false);
   const [genres, setGenres] = useState([]);
 
-  // Kiểm tra trạng thái đăng nhập
-  const userToken = localStorage.getItem('userToken');
-  const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
-  const isLoggedIn = !!userToken;
-  const isStaff = userInfo.role === 'staff';
-  const isCustomer = userInfo.role === 'customer' || !userInfo.role;
+  // Kiểm tra trạng thái đăng nhập từ AuthContext
+  const isLoggedIn = isAuthenticated();
+  const userIsStaff = isStaff();
+  const userIsCustomer = isCustomer();
 
   const handleLogout = () => {
-    localStorage.removeItem('userToken');
-    localStorage.removeItem('userInfo');
+    logout();
     navigate('/');
-    window.location.reload();
   };
 
   // Lấy dữ liệu medicine genres từ API
@@ -81,8 +79,8 @@ const Header = ({ searchQuery, setSearchQuery, medicineGenres = [], onSearchSubm
           <img src="/logohome.png" alt="Logo" className="w-32 h-auto" />
         </div>
         
-        {/* Thanh tìm kiếm - chỉ hiển thị cho khách hàng */}
-        {isCustomer && (
+        {/* Thanh tìm kiếm - hiển thị cho tất cả người dùng trừ staff */}
+        {!userIsStaff && (
           <div className="flex-1 max-w-2xl mx-10 mt-5">
             <div className="relative mb-2">
               <input
@@ -99,14 +97,22 @@ const Header = ({ searchQuery, setSearchQuery, medicineGenres = [], onSearchSubm
         )}
         
         {/* Spacer cho staff khi không có search bar */}
-        {isStaff && <div className="flex-1"></div>}
+        {userIsStaff && <div className="flex-1"></div>}
+        
         <div className="flex items-center gap-4">
-          <Bell className="w-6 h-6 text-white cursor-pointer" />
+          {/* Chuông thông báo - chỉ hiển thị khi đã đăng nhập */}
+          {isLoggedIn && <Bell className="w-6 h-6 text-white cursor-pointer" />}
           
           {/* Chỉ hiển thị đơn hàng và giỏ hàng cho khách hàng */}
-          {isCustomer && (
+          
+          {userIsCustomer && (
             <>
               <Package className="w-6 h-6 text-white cursor-pointer" onClick={() => navigate('/orders')} title="Đơn hàng của tôi" />
+            </>
+          )}
+
+          {!userIsStaff && (
+            <>             
               <div className="relative cursor-pointer" onClick={() => navigate('/cart')}>
                 <ShoppingCart className="w-6 h-6 text-white" />
                 {cartCount > 0 && (
@@ -119,7 +125,7 @@ const Header = ({ searchQuery, setSearchQuery, medicineGenres = [], onSearchSubm
           )}
           
           {/* Hiển thị nút dashboard cho staff */}
-          {isStaff && (
+          {userIsStaff && (
             <div 
               className="w-6 h-6 text-white cursor-pointer" 
               onClick={() => navigate('/staff/dashboard')} 
@@ -137,13 +143,15 @@ const Header = ({ searchQuery, setSearchQuery, medicineGenres = [], onSearchSubm
               <div className="flex items-center gap-2 bg-white bg-opacity-10 px-4 py-2 rounded-full">
                 <div className="w-8 h-8 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
                   <span className="text-white font-semibold text-sm">
-                    {(userInfo.name || userInfo.username || 'U').charAt(0).toUpperCase()}
+                    {user?.last_name?.charAt(0).toUpperCase()}
                   </span>
                 </div>
                 <div className="text-left">
-                  <p className="text-white text-sm font-medium">{userInfo.name || userInfo.username}</p>
+                  <p className="text-white text-sm font-medium">
+                    {user?.first_name} {user?.last_name}
+                  </p>
                   <p className="text-green-200 text-xs">
-                    {isStaff ? 'Nhân viên bán hàng' : 'Khách hàng'}
+                    {userIsStaff ? 'Nhân viên bán hàng' : 'Khách hàng'}
                   </p>
                 </div>
               </div>
@@ -163,84 +171,84 @@ const Header = ({ searchQuery, setSearchQuery, medicineGenres = [], onSearchSubm
           )}
         </div>
       </div>
-      {/* Navigation menu - chỉ hiển thị cho khách hàng */}
-      {isCustomer && (
-        <div className="max-w-5xl mx-auto px-5 flex items-center text-sm font-medium">
-          {/* Overlay when menu is open */}
+      {/* Navigation menu - hiển thị cho tất cả người dùng */}
+      {!userIsStaff && (
+      <div className="max-w-5xl mx-auto px-5 flex items-center text-sm font-medium">
+        {/* Overlay when menu is open */}
+        {showMedicineGenreMenu && (
+          <div className="fixed inset-0 bg-black bg-opacity-30 z-40"></div>
+        )}
+        {/* Danh mục có dropdown */}
+        <div className="relative z-50">
+          <div 
+            className="flex items-center px-4 py-3 rounded-b-lg mr-8 font-medium cursor-pointer"
+            onMouseEnter={() => setShowMedicineGenreMenu(true)}
+            onMouseLeave={() => setShowMedicineGenreMenu(false)}
+          >
+            <Menu className="w-5 h-5 mr-2" />
+            <span>Danh mục</span>
+            <ChevronDown className="w-4 h-4 ml-2" />
+          </div>
+          {/* Dropdown danh mục */}
           {showMedicineGenreMenu && (
-            <div className="fixed inset-0 bg-black bg-opacity-30 z-40"></div>
-          )}
-          {/* Danh mục có dropdown */}
-          <div className="relative z-50">
             <div 
-              className="flex items-center px-4 py-3 rounded-b-lg mr-8 font-medium cursor-pointer"
+              className="absolute z-50 bg-white text-gray-800 shadow-xl top-full rounded-lg w-max min-w-[600px] p-6"
               onMouseEnter={() => setShowMedicineGenreMenu(true)}
               onMouseLeave={() => setShowMedicineGenreMenu(false)}
             >
-              <Menu className="w-5 h-5 mr-2" />
-              <span>Danh mục</span>
-              <ChevronDown className="w-4 h-4 ml-2" />
-            </div>
-            {/* Dropdown danh mục */}
-            {showMedicineGenreMenu && (
-              <div 
-                className="absolute z-50 bg-white text-gray-800 shadow-xl top-full rounded-lg w-max min-w-[600px] p-6"
-                onMouseEnter={() => setShowMedicineGenreMenu(true)}
-                onMouseLeave={() => setShowMedicineGenreMenu(false)}
-              >
-                <div className="grid grid-cols-4 gap-6">
-                  {genres.map((genre) => (
-                    <div 
-                      key={genre.id}
-                      className="flex flex-col items-center text-center hover:text-green-600 transition cursor-pointer group"
-                      onClick={() => handleGenreClick(genre.id)}
-                    >
-                      <div className="w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center mb-3 group-hover:bg-blue-200 transition">
-                        {genre.imgMedicineGenreUrl ? (
-                          <img
-                            src={genre.imgMedicineGenreUrl}
-                            alt={genre.name}
-                            className="w-10 h-10 object-contain"
-                          />
-                        ) : (
-                          <span className="text-2xl">💊</span>
-                        )}
-                      </div>
-                      <span className="text-sm font-medium">{genre.name}</span>
+              <div className="grid grid-cols-4 gap-6">
+                {genres.map((genre) => (
+                  <div 
+                    key={genre.id}
+                    className="flex flex-col items-center text-center hover:text-green-600 transition cursor-pointer group"
+                    onClick={() => handleGenreClick(genre.id)}
+                  >
+                    <div className="w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center mb-3 group-hover:bg-blue-200 transition">
+                      {genre.imgMedicineGenreUrl ? (
+                        <img
+                          src={genre.imgMedicineGenreUrl}
+                          alt={genre.name}
+                          className="w-10 h-10 object-contain"
+                        />
+                      ) : (
+                        <span className="text-2xl">💊</span>
+                      )}
                     </div>
-                  ))}
-                  
-                  {/* Nếu không có dữ liệu từ API, hiển thị placeholder */}
-                  {genres.length === 0 && (
-                    <div className="col-span-4 text-center text-gray-500 py-8">
-                      Đang tải danh mục...
-                    </div>
-                  )}
-                </div>
+                    <span className="text-sm font-medium">{genre.name}</span>
+                  </div>
+                ))}
+                
+                {/* Nếu không có dữ liệu từ API, hiển thị placeholder */}
+                {genres.length === 0 && (
+                  <div className="col-span-4 text-center text-gray-500 py-8">
+                    Đang tải danh mục...
+                  </div>
+                )}
               </div>
-            )}
+            </div>
+          )}
+        </div>
+        <div className="flex gap-8">
+          <div className="py-3 font-medium cursor-pointer hover:opacity-80 transition-opacity" onClick={() => navigate('/medicines')}>
+            Thuốc
           </div>
-          <div className="flex gap-8">
-            <div className="py-3 font-medium cursor-pointer hover:opacity-80 transition-opacity" onClick={() => navigate('/medicines')}>
-              Thuốc
-            </div>
-            <div className="py-3 font-medium cursor-pointer hover:opacity-80 transition-opacity">
-              Tra cứu bệnh
-            </div>
-            <div className="py-3 font-medium cursor-pointer hover:opacity-80 transition-opacity">
-              Thực phẩm bảo vệ sức khỏe
-            </div>
-            <div className="py-3 font-medium cursor-pointer hover:opacity-80 transition-opacity">
-              Mẹ và bé
-            </div>
-            <div className="py-3 font-medium cursor-pointer hover:opacity-80 transition-opacity relative">
-              Nhãn hàng Gia Phúc
-            </div>
-            <div className="py-3 font-medium cursor-pointer hover:opacity-80 transition-opacity">
-              Chăm sóc cá nhân
-            </div>
+          <div className="py-3 font-medium cursor-pointer hover:opacity-80 transition-opacity">
+            Tra cứu bệnh
+          </div>
+          <div className="py-3 font-medium cursor-pointer hover:opacity-80 transition-opacity">
+            Thực phẩm bảo vệ sức khỏe
+          </div>
+          <div className="py-3 font-medium cursor-pointer hover:opacity-80 transition-opacity">
+            Mẹ và bé
+          </div>
+          <div className="py-3 font-medium cursor-pointer hover:opacity-80 transition-opacity relative">
+            Nhãn hàng Gia Phúc
+          </div>
+          <div className="py-3 font-medium cursor-pointer hover:opacity-80 transition-opacity">
+            Chăm sóc cá nhân
           </div>
         </div>
+      </div>
       )}
     </div>
   );

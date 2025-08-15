@@ -1,11 +1,41 @@
-import React from "react";
-import { Link } from "react-router-dom";
+import React, { useEffect, useRef } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import Header from "../ui/Header";
 import Footer from "../ui/Footer";
 import Base from "../ui/Base";
 import { FaCheckCircle, FaShoppingCart, FaClipboardList } from "react-icons/fa";
+import { orderService } from "../services/orderService";
 
 const OrderSuccess = () => {
+  const [searchParams] = useSearchParams();
+  const orderId = searchParams.get('orderId');
+  const hasSentEmail = useRef(false); // Prevent multiple email sends
+
+  useEffect(() => {
+    // Gửi email thông báo đặt hàng thành công cho COD
+    const sendOrderEmail = async () => {
+      if (orderId && !hasSentEmail.current) {
+        // Kiểm tra xem đã gửi email cho order này chưa
+        const emailSentKey = `email_sent_${orderId}`;
+        const alreadySent = localStorage.getItem(emailSentKey);
+        
+        if (!alreadySent) {
+          hasSentEmail.current = true; // Set flag immediately
+          try {
+            await orderService.sendOrderEmail(orderId);
+            localStorage.setItem(emailSentKey, 'true'); // Mark as sent
+            console.log('COD order success email sent successfully');
+          } catch (emailError) {
+            console.error('Failed to send COD order email:', emailError);
+            hasSentEmail.current = false; // Reset flag on error to allow retry
+          }
+        }
+      }
+    };
+
+    sendOrderEmail();
+  }, [orderId]);
+
   return (
     <div className="min-h-screen bg-gray-50 font-sans">
       <Header />
@@ -29,7 +59,7 @@ const OrderSuccess = () => {
               </Link>
               
               <Link 
-                to="/order-tracking?orderId=DH123456789" 
+                to={orderId ? `/order-detail/${orderId}` : "/orders"}
                 className="inline-flex items-center gap-2 bg-white border-2 border-green-700 text-green-700 px-8 py-3 rounded-lg font-semibold hover:bg-green-50 transition"
               >
                 <FaClipboardList />

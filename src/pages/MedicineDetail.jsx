@@ -17,9 +17,9 @@ const MedicineDetail = () => {
   const [tab, setTab] = useState("Thành phần");
   const [quantity, setQuantity] = useState(1);
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (medicine) {
-      const result = addToCart(medicine, quantity);
+      const result = await addToCart(medicine, quantity);
       if (result.success) {
         showSuccess(`Đã thêm ${quantity} ${medicine.name} vào giỏ hàng!`);
       } else {

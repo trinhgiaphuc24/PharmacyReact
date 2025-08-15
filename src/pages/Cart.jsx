@@ -5,11 +5,13 @@ import Footer from "../ui/Footer";
 import Base from "../ui/Base";
 import { useCart } from "../context/CartContext";
 import { useToast } from "../context/ToastContext";
+import { useAuth } from "../context/AuthContext";
 import { FaTrash, FaPlus, FaMinus, FaShoppingCart, FaArrowLeft, FaSignInAlt } from "react-icons/fa";
 
 const Cart = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
+  const { user } = useAuth();
   const { 
     cartItems, 
     updateQuantity, 
@@ -20,19 +22,14 @@ const Cart = () => {
     getSelectedItems,
     toggleItemSelection,
     selectAllItems,
-    isAllSelected,
-    isLoading
+    isAllSelected
   } = useCart();
   const { showSuccess, showInfo } = useToast();
 
-  // Kiểm tra trạng thái đăng nhập
-  const userToken = localStorage.getItem('userToken');
-  const isLoggedIn = !!userToken;
+  const isLoggedIn = !!user;
 
-  // Redirect to login if not logged in
   useEffect(() => {
     if (!isLoggedIn) {
-      // Store current page to redirect back after login
       localStorage.setItem('redirectAfterLogin', '/cart');
     }
   }, [isLoggedIn]);
@@ -45,29 +42,33 @@ const Cart = () => {
     navigate('/checkout');
   };
 
-  const handleRemoveItem = (item) => {
-    const result = removeFromCart(item.id);
+  const handleUpdateQuantity = async (id, newQuantity) => {
+    const result = await updateQuantity(id, newQuantity);
+    if (!result.success && result.message) {
+      showInfo(result.message);
+    }
+  };
+
+  const handleRemoveItem = async (item) => {
+    const result = await removeFromCart(item.id);
     if (result.success) {
       showInfo(`Đã xóa ${item.name} khỏi giỏ hàng`);
+    } else {
+      showInfo(result.message || 'Có lỗi xảy ra khi xóa sản phẩm');
     }
   };
 
-  const handleClearCart = () => {
-    const result = clearCart();
+  const handleClearCart = async () => {
+    const result = await clearCart();
     if (result.success) {
       showSuccess('Đã xóa toàn bộ giỏ hàng');
+    } else {
+      showInfo(result.message || 'Có lỗi xảy ra khi xóa giỏ hàng');
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="text-lg">Đang tải giỏ hàng...</div>
-      </div>
-    );
-  }
 
-  // Show login requirement if not logged in
+
   if (!isLoggedIn) {
     return (
       <div className="min-h-screen bg-gray-50 font-sans">
@@ -137,11 +138,13 @@ const Cart = () => {
       
       <div className="py-8 px-4">
         <div className="max-w-6xl mx-auto">
+
+          
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <FaShoppingCart className="text-2xl text-green-700" />
-              <h1 className="text-2xl font-bold text-gray-800">Giỏ hàng của bạn</h1>
+                      <h1 className="text-3xl font-bold text-gray-800">Giỏ hàng</h1>
               <div className="flex gap-2">
                 <span className="border border-green-700 text-green-700 text-sm px-2 py-1 rounded-full">
                   {totalItems} sản phẩm
@@ -230,7 +233,7 @@ const Cart = () => {
                             <span>Xuất xứ: {item.produce}</span>
                           </div>
                           <div className={`font-bold text-lg mt-2 ${item.selected ? 'text-green-700' : 'text-gray-400'}`}>
-                            {item.price.toLocaleString()} đ
+                            {(item.price || 0).toLocaleString()} đ
                           </div>
                         </div>
                         
@@ -246,7 +249,7 @@ const Cart = () => {
                           
                           <div className="flex items-center border rounded-lg">
                             <button
-                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                              onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
                               className={`p-2 hover:bg-gray-100 transition ${
                                 !item.selected ? 'opacity-50 cursor-not-allowed' : ''
                               }`}
@@ -260,7 +263,7 @@ const Cart = () => {
                               {item.quantity}
                             </span>
                             <button
-                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                              onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
                               className={`p-2 hover:bg-gray-100 transition ${
                                 !item.selected ? 'opacity-50 cursor-not-allowed' : ''
                               }`}
@@ -271,7 +274,10 @@ const Cart = () => {
                           </div>
                           
                           <div className={`font-bold ${item.selected ? 'text-green-700' : 'text-gray-400'}`}>
-                            {(item.price * item.quantity).toLocaleString()} đ
+                            {(item.total_price !== undefined 
+                              ? item.total_price 
+                              : ((item.price || 0) * item.quantity)
+                            ).toLocaleString()} đ
                           </div>
                         </div>
                       </div>

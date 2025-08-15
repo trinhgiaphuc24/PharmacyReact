@@ -2,17 +2,18 @@ import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
 import { useToast } from "../../context/ToastContext";
+import { useAuth } from "../../context/AuthContext";
 
 const MedicineList = ({ medicines = [] }) => {
-  const { addToCart, isInCart, getItemQuantity } = useCart();
+  const { addToCart } = useCart();
   const { showSuccess, showError, showInfo } = useToast();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
-  // Kiểm tra trạng thái đăng nhập
-  const userToken = localStorage.getItem('userToken');
-  const isLoggedIn = !!userToken;
+  // Kiểm tra trạng thái đăng nhập từ AuthContext
+  const isLoggedIn = !!user;
 
-  const handleAddToCart = (medicine, e) => {
+  const handleAddToCart = async (medicine, e) => {
     e.preventDefault();
     e.stopPropagation();
     
@@ -24,7 +25,7 @@ const MedicineList = ({ medicines = [] }) => {
       return;
     }
     
-    const result = addToCart(medicine, 1);
+    const result = await addToCart(medicine, 1);
     if (result.success) {
       showSuccess(`${medicine.name} đã được thêm vào giỏ hàng!`);
     } else {
@@ -60,11 +61,11 @@ const MedicineList = ({ medicines = [] }) => {
                 <p className="text-green-700 font-bold text-sm">{medicine.price ? medicine.price.toLocaleString() + " đ" : ""}</p>
               </div>
             </Link>
-            <button className="mt-2 bg-green-700 hover:bg-green-800 text-white text-sm font-semibold py-1 rounded">
+            {/* <button className="mt-2 bg-green-700 hover:bg-green-800 text-white text-sm font-semibold py-1 rounded">
               Mua ngay
-            </button>
+            </button> */}
             <button 
-              className="mt-2 bg-white hover:bg-gray-200 text-green-700 text-sm font-semibold py-1 rounded border border-green-700"
+              className="mt-2 bg-green-700 hover:bg-green-800 text-white text-sm font-semibold py-1 rounded border border-green-700"
               onClick={(e) => handleAddToCart(medicine, e)}
             >
               Thêm vào giỏ

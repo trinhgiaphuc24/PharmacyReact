@@ -1,57 +1,66 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 
 const Login = () => {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    username: "",
+    password: ""
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  
   const navigate = useNavigate();
+  const { defaultUserLogin } = useAuth();
+  const { showSuccess, showError } = useToast();
+
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const validateForm = () => {
+    const { username, password } = formData;
+    
+    if (!username.trim()) {
+      showError("Vui lòng nhập tên đăng nhập");
+      return false;
+    }
+    
+    if (!password) {
+      showError("Vui lòng nhập mật khẩu");
+      return false;
+    }
+    
+    return true;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setError("");
+    
+    if (!validateForm()) return;
+    
+    setIsLoading(true);
 
     try {
-      // Mock authentication - trong thực tế sẽ gọi API
-      if (username === "s" && password === "123") {
-        // Đăng nhập nhân viên
-        localStorage.setItem('userToken', 'mock-staff-token');
-        localStorage.setItem('userInfo', JSON.stringify({
-          id: 1,
-          username: 's',
-          name: 'Staff',
-          role: 'staff',
-          email: 'staff@pharmacy.com'
-        }));
+      const userData = await defaultUserLogin(formData);
+      showSuccess("Đăng nhập thành công!");
+      
+      const userRole = userData.userRole || userData.role || userData.user_role;
+      
+      if (userRole === "staff") {
         navigate('/staff/dashboard');
-      } else if (username === "u" && password === "123") {
-        // Đăng nhập khách hàng
-        localStorage.setItem('userToken', 'mock-user-token');
-        localStorage.setItem('userInfo', JSON.stringify({
-          id: 2,
-          username: 'u',
-          name: 'User',
-          role: 'customer',
-          email: 'user@email.com'
-        }));
-        
-        // Check if there's a redirect path stored
-        const redirectPath = localStorage.getItem('redirectAfterLogin');
-        if (redirectPath) {
-          localStorage.removeItem('redirectAfterLogin');
-          navigate(redirectPath);
-        } else {
-          navigate('/');
-        }
       } else {
-        setError("Tên đăng nhập hoặc mật khẩu không đúng");
+        navigate('/');
       }
-    } catch (err) {
-      setError("Đã xảy ra lỗi. Vui lòng thử lại.");
+      
+    } catch (error) {
+      console.error("Login error:", error);
+      showError(error.message || "Tên đăng nhập hoặc mật khẩu không đúng");
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -62,26 +71,20 @@ const Login = () => {
         <div className="flex-1 p-10 flex flex-col justify-center">
           <h2 className="text-3xl font-bold mb-2 text-gray-900">Đăng nhập</h2>
           <div className="h-1 w-16 bg-green-700 mb-8 rounded" />
-          
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
-              {error}
-            </div>
-          )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="block text-gray-700 mb-1">Tên đăng nhập</label>
               <div className="flex items-center border-b border-gray-300 py-2">
                 <span className="text-green-700 mr-2">
-                  <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path d="M2.94 6.94a8 8 0 1111.31 11.31A8 8 0 012.94 6.94zm1.42 1.42a6 6 0 108.49 8.49l-8.49-8.49zm9.19 9.19a6 6 0 01-8.49-8.49l8.49 8.49z"></path></svg>
+                  <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"></path></svg>
                 </span>
                 <input 
                   type="text" 
                   className="w-full outline-none bg-transparent" 
                   placeholder="Nhập tên đăng nhập" 
-                  value={username} 
-                  onChange={e => setUsername(e.target.value)}
+                  value={formData.username} 
+                  onChange={e => handleInputChange('username', e.target.value)}
                   required
                 />
               </div>
@@ -96,8 +99,8 @@ const Login = () => {
                   type="password" 
                   className="w-full outline-none bg-transparent" 
                   placeholder="Nhập mật khẩu" 
-                  value={password} 
-                  onChange={e => setPassword(e.target.value)}
+                  value={formData.password} 
+                  onChange={e => handleInputChange('password', e.target.value)}
                   required
                 />
               </div>
@@ -107,10 +110,14 @@ const Login = () => {
             </div>
             <button 
               type="submit" 
-              disabled={loading}
-              className="w-full bg-green-700 hover:bg-green-800 text-white font-semibold py-3 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isLoading}
+              className={`w-full font-semibold py-3 rounded-lg transition ${
+                isLoading 
+                  ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
+                  : 'bg-green-700 hover:bg-green-800 text-white'
+              }`}
             >
-              {loading ? "Đang đăng nhập..." : "Đăng nhập"}
+              {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
             </button>
           </form>
           
