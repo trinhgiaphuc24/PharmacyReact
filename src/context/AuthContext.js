@@ -302,7 +302,6 @@ function useAuth() {
 const ProtectedStaffRoute = ({ children }) => {
     const { isAuthenticated, isStaff } = useAuth();
     
-    // Redirect to login if not authenticated or not staff
     if (!isAuthenticated() || !isStaff()) {
         return <Navigate to="/login" replace />;
     }

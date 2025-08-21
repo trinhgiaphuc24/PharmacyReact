@@ -10,13 +10,12 @@ import Checkout from "./pages/Checkout";
 import Orders from "./pages/Orders";
 import OrderDetail from "./pages/OrderDetail";
 import OrderSuccess from "./pages/OrderSuccess";
-import OrderTracking from "./pages/OrderTracking";
 import PaymentResult from "./pages/PaymentResult";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import MedicineDetail from "./pages/MedicineDetail";
-import StaffDashboard from "./pages/StaffDashboard";
-import StaffOrderDetail from "./pages/StaffOrderDetail";
+import StaffDashboard from "./pages/StaffOrder";
+import StaffOrderDetailPage from "./pages/StaffOrderDetails";
 
 const App = () => {
   return (
@@ -32,7 +31,6 @@ const App = () => {
               <Route path="/orders" element={<Orders />} />
               <Route path="/order-detail/:orderId" element={<OrderDetail />} />
               <Route path="/order-success" element={<OrderSuccess />} />
-              <Route path="/order-tracking" element={<OrderTracking />} />
               <Route path="/payment/success" element={<PaymentResult />} />
               <Route path="/payment/error" element={<PaymentResult />} />
               <Route path="/login" element={<Login />} />
@@ -46,7 +44,7 @@ const App = () => {
               } />
               <Route path="/staff/orders/:orderId" element={
                 <ProtectedStaffRoute>
-                  <StaffOrderDetail />
+                  <StaffOrderDetailPage />
                 </ProtectedStaffRoute>
               } />
             </Routes>

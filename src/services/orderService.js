@@ -1,155 +1,126 @@
 import api, { endpoints } from "../utils/axiosConfig";
 
-// Order Service
+const getAuthHeaders = () => {
+    const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
+    return {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+    };
+};
+
 export const orderService = {
-    // Tạo đơn hàng mới
     createOrder: async (orderData) => {
-        try {
-            const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
-            const response = await api.post(endpoints['create-order'], orderData, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                }
-            });
-            return response.data;
-        } catch (error) {
-            console.error('Create order error:', error);
-            throw error;
-        }
+        const response = await api.post(endpoints['create-order'], orderData, { headers: getAuthHeaders() });
+        return response.data;
     },
 
-    // Lấy danh sách đơn hàng của user với filter
     getMyOrders: async (page = 1, filters = {}) => {
-        try {
-            const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
-            
-            // Build query parameters
-            const params = new URLSearchParams();
-            params.append('page', page);
-            
-            // Add filters to params
-            if (filters.order_id) params.append('order_id', filters.order_id);
-            if (filters.status) params.append('status', filters.status);
-            if (filters.payment_method) params.append('payment_method', filters.payment_method);
-            if (filters.shipping_method) params.append('shipping_method', filters.shipping_method);
-            if (filters.start_date) params.append('start_date', filters.start_date);
-            if (filters.end_date) params.append('end_date', filters.end_date);
-            
-            const response = await api.get(`${endpoints.orders}my-orders/?${params.toString()}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                }
-            });
-            return response.data;
-        } catch (error) {
-            console.error('Get my orders error:', error);
-            throw error;
-        }
+        const params = new URLSearchParams({ page });
+        Object.entries(filters).forEach(([key, value]) => {
+            if (value) params.append(key, value);
+        });
+        
+        const response = await api.get(`${endpoints.orders}my-orders/?${params.toString()}`, { 
+            headers: getAuthHeaders() 
+        });
+        return response.data;
     },
 
-    // Lấy chi tiết đơn hàng
     getOrderDetail: async (orderId) => {
-        try {
-            const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
-            const response = await api.get(`${endpoints.orders}${orderId}/`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                }
-            });
-            return response.data;
-        } catch (error) {
-            console.error('Get order detail error:', error);
-            throw error;
-        }
+        const response = await api.get(`${endpoints.orders}${orderId}/`, { headers: getAuthHeaders() });
+        return response.data;
     },
 
-    // Hủy đơn hàng
+    getStaffOrderDetail: async (orderId) => {
+        const response = await api.get(`${endpoints['staff-all-orders']}?order_id=${orderId}`, { 
+            headers: getAuthHeaders() 
+        });
+        
+        // Extract order data from various response structures
+        let ordersData = [];
+        const data = response.data;
+        
+        if (data?.results?.success && data.results.data) {
+            ordersData = Array.isArray(data.results.data) ? data.results.data : [data.results.data];
+        } else if (data?.success && data.data) {
+            ordersData = Array.isArray(data.data) ? data.data : [data.data];
+        } else if (data?.results) {
+            ordersData = Array.isArray(data.results) ? data.results : [data.results];
+        } else if (Array.isArray(data)) {
+            ordersData = data;
+        }
+        
+        if (ordersData.length > 0) {
+            return { success: true, data: ordersData[0] };
+        }
+        throw new Error('Order not found');
+    },
+
     cancelOrder: async (orderId) => {
-        try {
-            const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
-            const response = await api.patch(`${endpoints.orders}${orderId}/cancel/`, {}, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                }
-            });
-            return response.data;
-        } catch (error) {
-            console.error('Cancel order error:', error);
-            throw error;
-        }
+        const response = await api.patch(`${endpoints.orders}${orderId}/cancel/`, {}, { headers: getAuthHeaders() });
+        return response.data;
     },
 
-    // Lấy danh sách phí vận chuyển
     getShippingFees: async () => {
-        try {
-            const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
-            console.log('[orderService.getShippingFees] token:', token);
-            const response = await api.get(endpoints['shipping-fees'], {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                }
-            });
-            console.log('[orderService.getShippingFees] response:', response);
-            return response.data;
-        } catch (error) {
-            console.error('Get shipping fees error:', error);
-            throw error;
-        }
+        const response = await api.get(endpoints['shipping-fees'], { headers: getAuthHeaders() });
+        return response.data;
     },
 
-    // Tạo URL thanh toán VNPay
     createVNPayPayment: async (orderId) => {
-        try {
-            const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
-            const response = await api.post(endpoints['vnpay-create-payment'], {
-                order_id: orderId
-            }, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                }
-            });
-            return response.data;
-        } catch (error) {
-            console.error('Create VNPay payment error:', error);
-            throw error;
-        }
+        const response = await api.post(endpoints['vnpay-create-payment'], { order_id: orderId }, { 
+            headers: getAuthHeaders() 
+        });
+        return response.data;
     },
 
-    // Kiểm tra trạng thái thanh toán
     checkPaymentStatus: async (orderId) => {
+        const response = await api.get(`${endpoints['vnpay-check-status']}${orderId}/`, { headers: getAuthHeaders() });
+        return response.data;
+    },
+
+    sendOrderEmail: async (orderId) => {
+        const response = await api.post(endpoints['order-email'], { order_id: orderId }, { 
+            headers: getAuthHeaders() 
+        });
+        return response.data;
+    },
+
+    getAllOrders: async (page = 1, filters = {}) => {
+        const params = new URLSearchParams({ page });
+        
+        if (filters.status && filters.status !== 'all') {
+            params.append('status', filters.status);
+        }
+        if (filters.order_id?.trim()) {
+            params.append('order_id', filters.order_id.trim());
+        }
+        if (filters.start_date) {
+            params.append('start_date', filters.start_date);
+        }
+        
+        const response = await api.get(`${endpoints['staff-all-orders']}?${params.toString()}`, { 
+            headers: getAuthHeaders() 
+        });
+        return response.data;
+    },
+
+    updateOrderStatus: async (orderId, status) => {
         try {
-            const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
-            const response = await api.get(`${endpoints['vnpay-check-status']}${orderId}/`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                }
-            });
+            const response = await api.patch(`${endpoints.orders}${orderId}/update-status/`, 
+                { status }, { headers: getAuthHeaders() });
             return response.data;
         } catch (error) {
-            console.error('Check payment status error:', error);
+            if (error.response?.status === 404) {
+                return orderService.updateOrderStatusFallback(orderId, status);
+            }
             throw error;
         }
     },
 
-    // Gửi email đặt hàng thành công
-    sendOrderEmail: async (orderId) => {
-        try {
-            const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
-            const response = await api.post(endpoints['order-email'], {
-                order_id: orderId
-            }, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                }
-            });
-            return response.data;
-        } catch (error) {
-            console.error('Send order email error:', error);
-            throw error;
-        }
+    updateOrderStatusFallback: async (orderId, status) => {
+        const response = await api.patch(`${endpoints.orders}${orderId}/`, 
+            { status }, { headers: getAuthHeaders() });
+        return response.data;
     }
 };
 

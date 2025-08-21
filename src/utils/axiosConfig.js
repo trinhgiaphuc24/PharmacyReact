@@ -18,6 +18,8 @@ export const endpoints = {
     'orders': '/orders/',
     'order-detail': '/orders/{orderId}/',
     'create-order': '/orders/create-order/',
+    'my-orders': '/orders/my-orders/',
+    'staff-all-orders': '/orders/staff-all-orders/',  // Endpoint riêng cho staff xem tất cả đơn hàng
     'shipping-fees': '/shipping-fees/',
     'vnpay-create-payment': '/vnpay/create-payment/',
     'vnpay-check-status': '/vnpay/check-status/',
