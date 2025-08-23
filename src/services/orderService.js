@@ -121,6 +121,60 @@ export const orderService = {
         const response = await api.patch(`${endpoints.orders}${orderId}/`, 
             { status }, { headers: getAuthHeaders() });
         return response.data;
+    },
+
+    exportOrderPDF: async (orderId) => {
+        try {
+            // Use backend PDF generation only
+            const response = await api.get(`${endpoints.orders}${orderId}/export-pdf/`, {
+                headers: getAuthHeaders(),
+                responseType: 'blob'
+            });
+            
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `hoa-don-${orderId}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+            
+            return { success: true, message: 'Đã tải xuống hóa đơn PDF' };
+        } catch (error) {
+            console.error('PDF export error:', error);
+            return { 
+                success: false, 
+                message: error.response?.data?.message || 'Không thể xuất hóa đơn PDF' 
+            };
+        }
+    },
+
+    getStatusText: (status) => {
+        const statusMap = {
+            'pending': 'Chờ xác nhận',
+            'waiting_for_pickup': 'Chờ lấy hàng', 
+            'shipping': 'Đang giao hàng',
+            'delivered': 'Đã giao',
+            'canceled': 'Đã hủy'
+        };
+        return statusMap[status] || status;
+    },
+
+    getPaymentText: (method) => {
+        const methodMap = {
+            'cod': 'Thanh toán khi nhận',
+            'vnpay': 'VNPay'
+        };
+        return methodMap[method] || method;
+    },
+
+    getShippingText: (method) => {
+        const methodMap = {
+            'store_pickup': 'Nhận tại cửa hàng',
+            'home_delivery': 'Giao hàng tận nơi'
+        };
+        return methodMap[method] || 'Nhận tại cửa hàng';
     }
 };
 

@@ -12,6 +12,7 @@ const OrderFilters = ({
     { value: "all", label: "Tất cả" },
     { value: "pending", label: "Chờ xác nhận" },
     { value: "waiting_for_pickup", label: "Chờ lấy hàng" },
+    { value: "waiting_for_delivery", label: "Chờ giao hàng" },
     { value: "delivered", label: "Đã giao" },
     { value: "canceled", label: "Đã hủy" }
   ]

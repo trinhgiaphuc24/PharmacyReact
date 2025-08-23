@@ -17,8 +17,10 @@ const OrderDetail = () => {
     order, 
     isLoading, 
     isCanceling, 
+    isExporting,
     getShippingFee, 
-    handleCancelOrder 
+    handleCancelOrder,
+    handleExportPDF
   } = useUserOrderDetail(orderId);
 
   if (isLoading) {
@@ -76,6 +78,8 @@ const OrderDetail = () => {
                 getShippingFee={getShippingFee}
                 isCanceling={isCanceling}
                 onCancel={handleCancelOrder}
+                isExporting={isExporting}
+                onExportPDF={handleExportPDF}
               />
             </div>
           </div>

@@ -8,6 +8,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from .models import Order, PaymentDetail
 from .vnpay_service import VNPayService
+from .email_service import EmailService
 import json
 import logging
 
@@ -100,6 +101,10 @@ class VNPayReturnView(View):
                 # Cập nhật trạng thái đơn hàng
                 order.status = 'waiting_for_pickup'  # hoặc waiting_for_delivery
                 order.save()
+                
+                # Gửi email thông báo đặt hàng và thanh toán thành công
+                if order.user.email:
+                    EmailService.send_order_success_email(order)
                 
                 # Redirect đến trang thành công
                 return HttpResponseRedirect(f'http://localhost:3000/payment/success?order_id={order_id}')

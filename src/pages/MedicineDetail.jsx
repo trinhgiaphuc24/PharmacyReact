@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import Header from "../ui/Header";
 import Footer from "../ui/Footer";
 import Base from "../ui/Base";
@@ -13,7 +14,8 @@ import ActionButtons from "../features/MedicineDetail/ActionButtons";
 import MedicineDetailTabs from "../features/MedicineDetail/MedicineDetailTabs";
 
 const MedicineDetail = () => {
-  const { addToCart } = useCart();
+  const navigate = useNavigate();
+  const { addToCart, buyNow } = useCart();
   const { showSuccess, showError } = useToast();
   const {
     medicine,
@@ -39,8 +41,14 @@ const MedicineDetail = () => {
   };
 
   const handleBuyNow = () => {
-    // TODO: Implement buy now functionality
-    console.log('Buy now clicked');
+    if (medicine) {
+      const result = buyNow(medicine, quantity);
+      if (result.success) {
+        navigate('/checkout');
+      } else {
+        showError(result.message || 'Không thể thực hiện mua ngay');
+      }
+    }
   };
 
   if (loading) {

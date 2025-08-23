@@ -8,6 +8,7 @@ export const useUserOrderDetail = (orderId) => {
   const [order, setOrder] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isCanceling, setIsCanceling] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [shippingFees, setShippingFees] = useState([]);
   
   const navigate = useNavigate();
@@ -72,6 +73,25 @@ export const useUserOrderDetail = (orderId) => {
     }
   };
 
+  const handleExportPDF = async () => {
+    if (!orderId) return;
+    
+    setIsExporting(true);
+    try {
+      const result = await orderService.exportOrderPDF(orderId);
+      if (result.success) {
+        showSuccess(result.message || 'Đã tải xuống hóa đơn PDF');
+      } else {
+        showError(result.message || 'Không thể xuất hóa đơn PDF');
+      }
+    } catch (error) {
+      console.error('Export PDF error:', error);
+      showError('Có lỗi xảy ra khi xuất hóa đơn PDF');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   useEffect(() => {
     if (orderId) {
       loadOrderDetail();
@@ -82,8 +102,10 @@ export const useUserOrderDetail = (orderId) => {
     order,
     isLoading,
     isCanceling,
+    isExporting,
     shippingFees,
     getShippingFee,
-    handleCancelOrder
+    handleCancelOrder,
+    handleExportPDF
   };
 };

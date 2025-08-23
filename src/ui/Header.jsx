@@ -1,11 +1,24 @@
 import React, { useState, useEffect } from "react";
-import { Search, Bell, ShoppingCart, User, Menu, ChevronDown, Package } from "lucide-react";
+import {
+  Search,
+  Bell,
+  ShoppingCart,
+  User,
+  Menu,
+  ChevronDown,
+  Package,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import axios, { endpoints } from "../utils/axiosConfig";
 
-const Header = ({ searchQuery, setSearchQuery, medicineGenres = [], onSearchSubmit }) => {
+const Header = ({
+  searchQuery,
+  setSearchQuery,
+  medicineGenres = [],
+  onSearchSubmit,
+}) => {
   const navigate = useNavigate();
   const { getTotalItems } = useCart();
   const { user, isAuthenticated, isStaff, isCustomer, logout } = useAuth();
@@ -20,7 +33,7 @@ const Header = ({ searchQuery, setSearchQuery, medicineGenres = [], onSearchSubm
 
   const handleLogout = () => {
     logout();
-    navigate('/');
+    navigate("/");
   };
 
   // Lấy dữ liệu medicine genres từ API
@@ -44,7 +57,7 @@ const Header = ({ searchQuery, setSearchQuery, medicineGenres = [], onSearchSubm
       if (searchQuery.trim()) {
         navigate(`/medicines?q=${encodeURIComponent(searchQuery.trim())}`);
       } else {
-        navigate('/medicines');
+        navigate("/medicines");
       }
     }
   };
@@ -67,7 +80,7 @@ const Header = ({ searchQuery, setSearchQuery, medicineGenres = [], onSearchSubm
   };
 
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       handleSearch();
     }
   };
@@ -75,10 +88,13 @@ const Header = ({ searchQuery, setSearchQuery, medicineGenres = [], onSearchSubm
   return (
     <div className="bg-green-700 text-white px-30">
       <div className="max-w-5xl mx-auto px-5 flex items-center text-sm font-medium">
-        <div className="flex items-center w-40 h-20 rounded-lg justify-center mr-8 cursor-pointer" onClick={() => navigate('/')}>
+        <div
+          className="flex items-center w-40 h-20 rounded-lg justify-center mr-8 cursor-pointer"
+          onClick={() => navigate("/")}
+        >
           <img src="/logohome.png" alt="Logo" className="w-32 h-auto" />
         </div>
-        
+
         {/* Thanh tìm kiếm - hiển thị cho tất cả người dùng trừ staff */}
         {!userIsStaff && (
           <div className="flex-1 max-w-2xl mx-10 mt-5">
@@ -91,29 +107,39 @@ const Header = ({ searchQuery, setSearchQuery, medicineGenres = [], onSearchSubm
                 className="w-full py-3 px-4 pr-12 border-2 border-gray-200 rounded-lg text-base outline-none focus:border-blue-500 transition-colors text-gray-800"
                 placeholder="Bạn đang tìm gì hôm nay..."
               />
-              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 w-6 h-6 text-gray-400 cursor-pointer" onClick={handleSearch} />
+              <Search
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 w-6 h-6 text-gray-400 cursor-pointer"
+                onClick={handleSearch}
+              />
             </div>
           </div>
         )}
-        
+
         {/* Spacer cho staff khi không có search bar */}
         {userIsStaff && <div className="flex-1"></div>}
-        
+
         <div className="flex items-center gap-4">
           {/* Chuông thông báo - chỉ hiển thị khi đã đăng nhập */}
           {isLoggedIn && <Bell className="w-6 h-6 text-white cursor-pointer" />}
-          
+
           {/* Chỉ hiển thị đơn hàng và giỏ hàng cho khách hàng */}
-          
+
           {userIsCustomer && (
             <>
-              <Package className="w-6 h-6 text-white cursor-pointer" onClick={() => navigate('/orders')} title="Đơn hàng của tôi" />
+              <Package
+                className="w-6 h-6 text-white cursor-pointer"
+                onClick={() => navigate("/orders")}
+                title="Đơn hàng của tôi"
+              />
             </>
           )}
 
           {!userIsStaff && (
-            <>             
-              <div className="relative cursor-pointer" onClick={() => navigate('/cart')}>
+            <>
+              <div
+                className="relative cursor-pointer"
+                onClick={() => navigate("/cart")}
+              >
                 <ShoppingCart className="w-6 h-6 text-white" />
                 {cartCount > 0 && (
                   <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
@@ -123,20 +149,30 @@ const Header = ({ searchQuery, setSearchQuery, medicineGenres = [], onSearchSubm
               </div>
             </>
           )}
-          
+
           {/* Hiển thị nút dashboard cho staff */}
           {userIsStaff && (
-            <div 
-              className="w-6 h-6 text-white cursor-pointer" 
-              onClick={() => navigate('/staff/dashboard')} 
+            <div
+              className="w-6 h-6 text-white cursor-pointer"
+              onClick={() => navigate("/staff/dashboard")}
               title="Quản lý đơn hàng"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                />
               </svg>
             </div>
           )}
-          
+
           {/* User section */}
           {isLoggedIn ? (
             <div className="flex items-center gap-3">
@@ -150,9 +186,6 @@ const Header = ({ searchQuery, setSearchQuery, medicineGenres = [], onSearchSubm
                   <p className="text-white text-sm font-medium">
                     {user?.first_name} {user?.last_name}
                   </p>
-                  <p className="text-green-200 text-xs">
-                    {userIsStaff ? 'Nhân viên bán hàng' : 'Khách hàng'}
-                  </p>
                 </div>
               </div>
               <button
@@ -164,7 +197,10 @@ const Header = ({ searchQuery, setSearchQuery, medicineGenres = [], onSearchSubm
               </button>
             </div>
           ) : (
-            <a href="/login" className="flex items-center gap-2 bg-gray-100 px-4 py-2 rounded-lg text-green-700 text-sm hover:bg-gray-200 transition-colors">
+            <a
+              href="/login"
+              className="flex items-center gap-2 bg-gray-100 px-4 py-2 rounded-lg text-green-700 text-sm hover:bg-gray-200 transition-colors"
+            >
               <User className="w-5 h-5" />
               <span>Đăng nhập/Đăng ký</span>
             </a>
@@ -172,7 +208,6 @@ const Header = ({ searchQuery, setSearchQuery, medicineGenres = [], onSearchSubm
         </div>
       </div>
       {/* Navigation menu - hiển thị cho tất cả người dùng */}
-      {!userIsStaff && (
       <div className="max-w-5xl mx-auto px-5 flex items-center text-sm font-medium">
         {/* Overlay when menu is open */}
         {showMedicineGenreMenu && (
@@ -180,7 +215,7 @@ const Header = ({ searchQuery, setSearchQuery, medicineGenres = [], onSearchSubm
         )}
         {/* Danh mục có dropdown */}
         <div className="relative z-50">
-          <div 
+          <div
             className="flex items-center px-4 py-3 rounded-b-lg mr-8 font-medium cursor-pointer"
             onMouseEnter={() => setShowMedicineGenreMenu(true)}
             onMouseLeave={() => setShowMedicineGenreMenu(false)}
@@ -191,14 +226,14 @@ const Header = ({ searchQuery, setSearchQuery, medicineGenres = [], onSearchSubm
           </div>
           {/* Dropdown danh mục */}
           {showMedicineGenreMenu && (
-            <div 
+            <div
               className="absolute z-50 bg-white text-gray-800 shadow-xl top-full rounded-lg w-max min-w-[600px] p-6"
               onMouseEnter={() => setShowMedicineGenreMenu(true)}
               onMouseLeave={() => setShowMedicineGenreMenu(false)}
             >
               <div className="grid grid-cols-4 gap-6">
                 {genres.map((genre) => (
-                  <div 
+                  <div
                     key={genre.id}
                     className="flex flex-col items-center text-center hover:text-green-600 transition cursor-pointer group"
                     onClick={() => handleGenreClick(genre.id)}
@@ -217,7 +252,7 @@ const Header = ({ searchQuery, setSearchQuery, medicineGenres = [], onSearchSubm
                     <span className="text-sm font-medium">{genre.name}</span>
                   </div>
                 ))}
-                
+
                 {/* Nếu không có dữ liệu từ API, hiển thị placeholder */}
                 {genres.length === 0 && (
                   <div className="col-span-4 text-center text-gray-500 py-8">
@@ -229,7 +264,10 @@ const Header = ({ searchQuery, setSearchQuery, medicineGenres = [], onSearchSubm
           )}
         </div>
         <div className="flex gap-8">
-          <div className="py-3 font-medium cursor-pointer hover:opacity-80 transition-opacity" onClick={() => navigate('/medicines')}>
+          <div
+            className="py-3 font-medium cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => navigate("/medicines")}
+          >
             Thuốc
           </div>
           <div className="py-3 font-medium cursor-pointer hover:opacity-80 transition-opacity">
@@ -249,7 +287,6 @@ const Header = ({ searchQuery, setSearchQuery, medicineGenres = [], onSearchSubm
           </div>
         </div>
       </div>
-      )}
     </div>
   );
 };

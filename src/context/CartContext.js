@@ -93,7 +93,6 @@ export const CartProvider = ({ children }) => {
       
       // If user just logged in
       if (!lastAuthState && currentAuthState && !isLoading && !isSyncing) {
-        console.log('User just logged in, syncing cart...');
         syncCartWithBackend();
       }
       
@@ -157,7 +156,7 @@ export const CartProvider = ({ children }) => {
         }
       });
 
-      return { success: true, message: 'Đã thêm vào giỏ hàng' };
+      return { success: true, message: 'Đã thêm vào giỏ hàng', cartItemId: response.data?.id };
     } catch (error) {
       return { success: false, message: 'Lỗi khi thêm vào giỏ hàng' };
     } finally {
@@ -316,6 +315,62 @@ export const CartProvider = ({ children }) => {
     return item ? item.quantity : 0;
   }, [cartItems]);
 
+  // Buy now - temporary cart for direct purchase
+  const buyNow = useCallback((medicine, quantity = 1) => {
+    if (!isUserLoggedIn()) {
+      return { success: false, message: 'Vui lòng đăng nhập để mua hàng' };
+    }
+
+    if (!medicine?.id || quantity <= 0 || quantity > 99) {
+      return { success: false, message: 'Dữ liệu sản phẩm không hợp lệ' };
+    }
+
+    // Store buy now item in localStorage for checkout page
+    const buyNowItem = {
+      id: medicine.id,
+      name: medicine.name || 'Sản phẩm không có tên',
+      price: medicine.price || 0,
+      quantity: quantity,
+      total_price: (medicine.price || 0) * quantity,
+      selected: true,
+      image: medicine.images?.[0]?.imgMedicineUrl || medicine.image,
+      genre: medicine.genre?.name || "Không xác định",
+      produce: medicine.produce?.name || "Không xác định",
+      isBuyNow: true
+    };
+
+    localStorage.setItem('buyNowItem', JSON.stringify(buyNowItem));
+    return { success: true, message: 'Chuyển đến trang thanh toán' };
+  }, [isUserLoggedIn]);
+
+  // Reorder - buy again from order items  
+  const reorderItems = useCallback((orderItems) => {
+    if (!isUserLoggedIn()) {
+      return { success: false, message: 'Vui lòng đăng nhập để mua lại' };
+    }
+
+    if (!orderItems || orderItems.length === 0) {
+      return { success: false, message: 'Không có sản phẩm để mua lại' };
+    }
+
+    // Convert order items to buy now format
+    const reorderItemsFormatted = orderItems.map(item => ({
+      id: item.medicine || item.medicine_id || item.id,
+      name: item.medicine_name || item.name || 'Sản phẩm không có tên',
+      price: item.price || 0,
+      quantity: item.quantity || 1,
+      total_price: (item.price || 0) * (item.quantity || 1),
+      selected: true,
+      image: item.medicine_image || item.image,
+      genre: "Không xác định",
+      produce: "Không xác định",
+      isBuyNow: true
+    }));
+
+    localStorage.setItem('buyNowItem', JSON.stringify(reorderItemsFormatted));
+    return { success: true, message: 'Chuyển đến trang thanh toán' };
+  }, [isUserLoggedIn]);
+
   const value = {
     // State
     cartItems,
@@ -324,6 +379,8 @@ export const CartProvider = ({ children }) => {
     
     // Actions
     addToCart,
+    buyNow,
+    reorderItems,
     updateQuantity,
     removeFromCart,
     clearCart,

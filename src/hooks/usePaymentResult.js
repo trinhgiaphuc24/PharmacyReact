@@ -88,7 +88,7 @@ export const usePaymentResult = () => {
               try {
                 await orderService.sendOrderEmail(orderId);
                 localStorage.setItem(emailSentKey, 'true');
-                console.log('VNPay order success email sent successfully');
+                // VNPay order success email sent successfully
               } catch (emailError) {
                 console.error('Failed to send VNPay order email:', emailError);
                 hasSentEmail.current = false;

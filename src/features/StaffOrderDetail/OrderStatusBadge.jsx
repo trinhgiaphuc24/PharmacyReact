@@ -5,9 +5,8 @@ const OrderStatusBadge = ({ status, showIcon = false, className = "" }) => {
   const statusConfig = {
     pending: { bg: "bg-yellow-100 text-yellow-800 border-yellow-200", text: "Chờ xác nhận", icon: Clock },
     waiting_for_pickup: { bg: "bg-blue-100 text-blue-800 border-blue-200", text: "Chờ lấy hàng", icon: Package },
-    shipping: { bg: "bg-orange-100 text-orange-800 border-orange-200", text: "Đang giao hàng", icon: Truck },
+    waiting_for_delivery: { bg: "bg-orange-100 text-orange-800 border-orange-200", text: "Chờ giao hàng", icon: Truck },
     delivered: { bg: "bg-green-100 text-green-800 border-green-200", text: "Đã giao", icon: CheckCircle },
-    returned: { bg: "bg-purple-100 text-purple-800 border-purple-200", text: "Trả hàng", icon: XCircle },
     canceled: { bg: "bg-red-100 text-red-800 border-red-200", text: "Đã hủy", icon: XCircle },
   };
 

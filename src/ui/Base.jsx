@@ -536,6 +536,9 @@ const Base = ({ children }) => {
             case 'Lưu ý quan trọng':
               sections[sectionName] = 'Tham khảo ý kiến dược sĩ trước khi sử dụng. Đọc kỹ hướng dẫn sử dụng.';
               break;
+            default:
+              sections[sectionName] = 'Thông tin sẽ được cập nhật sớm.';
+              break;
           }
         }
       });
@@ -941,7 +944,7 @@ const Base = ({ children }) => {
       )}
 
       {/* Custom CSS */}
-      <style jsx>{`
+      <style jsx="true">{`
         @keyframes fadeIn {
           from {
             opacity: 0;

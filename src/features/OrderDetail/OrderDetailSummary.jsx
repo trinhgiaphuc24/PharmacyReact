@@ -1,7 +1,7 @@
 import React from 'react';
-import { FaCreditCard, FaWallet, FaStore, FaTruck } from 'react-icons/fa';
+import { FaCreditCard, FaWallet, FaStore, FaTruck, FaFilePdf } from 'react-icons/fa';
 
-const OrderDetailSummary = ({ order, getShippingFee, isCanceling, onCancel }) => {
+const OrderDetailSummary = ({ order, getShippingFee, isCanceling, onCancel, isExporting, onExportPDF }) => {
   const paymentMapping = {
     'cod': { label: 'Thanh toán khi nhận hàng', icon: FaCreditCard },
     'vnpay': { label: 'VNPay', icon: FaWallet }
@@ -70,7 +70,7 @@ const OrderDetailSummary = ({ order, getShippingFee, isCanceling, onCancel }) =>
         </div>
 
         {/* Cancel Button */}
-        {order.status === 'pending' && (
+        {(order.status === 'pending' || order.status === 'waiting_for_pickup') && (
           <button
             onClick={onCancel}
             disabled={isCanceling}
@@ -81,6 +81,22 @@ const OrderDetailSummary = ({ order, getShippingFee, isCanceling, onCancel }) =>
             }`}
           >
             {isCanceling ? 'Đang hủy...' : 'Hủy đơn hàng'}
+          </button>
+        )}
+
+        {/* Export PDF Button */}
+        {order.status === 'delivered' && (
+          <button
+            onClick={onExportPDF}
+            disabled={isExporting}
+            className={`w-full py-3 rounded-lg font-semibold transition flex items-center justify-center gap-2 ${
+              isExporting
+                ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                : 'bg-green-600 text-white hover:bg-green-700'
+            }`}
+          >
+            <FaFilePdf className="w-4 h-4" />
+            {isExporting ? 'Đang xuất...' : 'Xuất hóa đơn PDF'}
           </button>
         )}
       </div>

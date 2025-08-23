@@ -25,10 +25,10 @@ export const useOrders = () => {
       
       const formattedOrders = ordersData.map(order => ({
         id: order.id,
-        customerName: order.user_name || order.online_order?.ship_info?.full_name || 'N/A',
-        customerPhone: order.online_order?.ship_info?.phoneNumber || 'N/A', 
-        totalAmount: parseFloat(order.total || 0),
-        status: order.status || 'pending',
+        customerName: order.user_name || order.online_order?.ship_info?.full_name,
+        customerPhone: order.online_order?.ship_info?.phoneNumber, 
+        totalAmount: parseFloat(order.total),
+        status: order.status,
         createdAt: order.createdAt,
         deliveryType: order.online_order?.shipping_method === 'store_pickup' ? 'pickup' : 'delivery'
       }));

@@ -7,7 +7,7 @@ const StatusUpdateModal = ({ isOpen, onClose, orderId, currentStatus, onStatusCh
   const statusConfig = {
     pending: { text: "Chờ xác nhận", icon: Clock },
     waiting_for_pickup: { text: "Chờ lấy hàng", icon: Package },
-    shipping: { text: "Đang giao hàng", icon: Truck },
+    waiting_for_delivery: { text: "Chờ giao hàng", icon: Truck },
     delivered: { text: "Đã giao", icon: CheckCircle },
     canceled: { text: "Đã hủy", icon: XCircle },
   };

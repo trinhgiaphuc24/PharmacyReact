@@ -1,13 +1,121 @@
+from django.contrib.auth.hashers import make_password
+from pharmacies.models import *
+from rest_framework import serializers
+from rest_framework.serializers import ModelSerializer, SerializerMethodField
+from pharmacies.models import Cart
+
+
+class UserSerializer(ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'password', 'phone_number', 'first_name', 'last_name', 'userRole']
+
+    def create(self, validated_data):
+        data = validated_data.copy()
+        u = User(**data)
+        u.set_password(u.password)
+        u.save()
+        Cart.objects.create(user=u)
+        return u
+
+
+class MedicineGenreSerializer(ModelSerializer):
+    class Meta:
+        model = MedicineGenre
+        fields = ['id', 'name', 'imgMedicineGenreUrl', 'active']
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['imgMedicineGenreUrl'] = instance.imgMedicineGenreUrl.url if instance.imgMedicineGenreUrl else None
+        return data
+
+
+class ProduceSerializer(ModelSerializer):
+    class Meta:
+        model = Produce
+        fields = ['id', 'name', 'active']
+
+
+class MedicineImageSerializer(ModelSerializer):
+    class Meta:
+        model = MedicineImage
+        fields = ['id', 'imgMedicineUrl', 'medicine']
+    
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['imgMedicineUrl'] = instance.imgMedicineUrl.url if instance.imgMedicineUrl else None
+        return data
+
+
+class MedicineSerializer(ModelSerializer):
+    medicineGenre = MedicineGenreSerializer(read_only=True)
+    produce = ProduceSerializer(read_only=True)
+    images = MedicineImageSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Medicine
+        fields = [
+            'id', 'name', 'description', 'ingredient', 'price', 'use', 'format', 'note', 'benefit',
+            'createdAt', 'medicineGenre', 'produce', 'active', 'images'
+        ]
+
+
+
+class CartItemSerializer(ModelSerializer):
+    medicine_name = serializers.CharField(source='medicine.name', read_only=True)
+    medicine_price = serializers.FloatField(source='medicine.price', read_only=True)
+    medicine_genre = serializers.CharField(source='medicine.medicineGenre.name', read_only=True)
+    medicine_produce = serializers.CharField(source='medicine.produce.name', read_only=True)
+    medicine_images = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = CartItem
+        fields = ['id', 'cart', 'medicine', 'medicine_name', 'medicine_price', 'medicine_genre', 'medicine_produce', 'medicine_images', 'quantity', 'total_price']
+        read_only_fields = ['total_price']
+
+    def get_medicine_images(self, obj):
+        # Sử dụng .url để convert CloudinaryResource thành string
+        try:
+            if obj.medicine.images.exists():
+                return [{"imgMedicineUrl": img.imgMedicineUrl.url if img.imgMedicineUrl else None} for img in obj.medicine.images.all()]
+            return []
+        except Exception as e:
+            print(f"Error getting medicine images: {e}")
+            return []
+
+    def create(self, validated_data):
+        quantity = validated_data['quantity']
+        medicine = validated_data['medicine']
+        validated_data['total_price'] = quantity * medicine.price
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        if 'quantity' in validated_data:
+            quantity = validated_data['quantity']
+            validated_data['total_price'] = quantity * instance.medicine.price
+        return super().update(instance, validated_data)
+
+
+class CartSerializer(ModelSerializer):
+    items = CartItemSerializer(many=True, read_only=True)
+    total_cart_price = serializers.SerializerMethodField()
+    total_items = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Cart
+        fields = ['id', 'user', 'items', 'total_cart_price', 'total_items']
+
+    def get_total_cart_price(self, obj):
+        return sum(item.total_price for item in obj.items.all())
+
+    def get_total_items(self, obj):
+        return sum(item.quantity for item in obj.items.all())
+
+
 from rest_framework import serializers
 from datetime import date
 from django.db import transaction
-# Giả sử các models nằm trong app chính
-# Bạn cần thay đổi import path cho phù hợp với project của bạn
-# Ví dụ: from your_main_app.models import Order, OrderDetail, ...
-from your_main_app.models import (
-    Order, OrderDetail, OnlineOrder, OnlineOrderShip, 
-    PaymentDetail, ShippingFee, Medicine, CartItem
-)
+from .models import Order, OrderDetail, OnlineOrder, OnlineOrderShip, PaymentDetail, ShippingFee, Medicine, CartItem
 
 
 class ShippingFeeSerializer(serializers.ModelSerializer):
@@ -60,14 +168,21 @@ class OrderSerializer(serializers.ModelSerializer):
     details = OrderDetailSerializer(many=True, read_only=True)
     online_order = OnlineOrderSerializer(read_only=True)
     payment_detail = PaymentDetailSerializer(read_only=True)
-    user_name = serializers.CharField(source='user.first_name', read_only=True)
-    
+    user_name = serializers.SerializerMethodField()
+    phone_number = serializers.CharField(source='user.phone_number', read_only=True)
+    email = serializers.EmailField(source='user.email', read_only=True)
+
     class Meta:
         model = Order
         fields = [
             'id', 'date', 'status', 'createdAt', 'paymentMethod', 'total', 
-            'user', 'user_name', 'shipping_fee', 'details', 'online_order', 'payment_detail'
+            'user', 'user_name', 'shipping_fee', 'details', 'online_order', 'payment_detail', 'phone_number', 'email'
         ]
+
+    def get_user_name(self, obj):
+        if obj.user:
+            return f"{obj.user.first_name} {obj.user.last_name}".strip()
+        return ""
 
 
 class CreateOrderSerializer(serializers.Serializer):
@@ -185,3 +300,9 @@ class CreateOrderSerializer(serializers.Serializer):
         cart_items.delete()
         
         return order
+
+
+class ChatHistorySerializer(ModelSerializer):
+    class Meta:
+        model = ChatHistory
+        fields = ['id', 'user_message', 'bot_response', 'created_at']

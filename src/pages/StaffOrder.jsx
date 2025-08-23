@@ -43,6 +43,8 @@ const StaffDashboard = () => {
         return "bg-yellow-100 text-yellow-800";
       case "waiting_for_pickup":
         return "bg-blue-100 text-blue-800";
+      case "waiting_for_delivery":
+        return "bg-orange-100 text-orange-800";
       case "delivered":
         return "bg-green-100 text-green-800";
       case "canceled":
@@ -58,6 +60,8 @@ const StaffDashboard = () => {
         return "Chờ xác nhận";
       case "waiting_for_pickup":
         return "Chờ lấy hàng";
+      case "waiting_for_delivery":
+        return "Chờ giao hàng";
       case "delivered":
         return "Đã giao";
       case "canceled":

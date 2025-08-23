@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   FaShoppingBag,
   FaTruck,
@@ -8,9 +8,15 @@ import {
   FaWallet
 } from 'react-icons/fa';
 import OrderStatusBadge from '../StaffOrderDetail/OrderStatusBadge';
-import { formatCurrency, formatDate } from '../../utils/formatters';
+import { formatCurrency, formatDate } from '../../utils/helper';
+import { useCart } from '../../context/CartContext';
+import { useToast } from '../../context/ToastContext';
 
 const OrderCard = ({ order, onCancel }) => {
+  const navigate = useNavigate();
+  const { reorderItems } = useCart();
+  const { showSuccess, showError } = useToast();
+  
   const paymentMapping = {
     'cod': { label: 'Thanh toán khi nhận hàng', icon: FaCreditCard },
     'vnpay': { label: 'VNPay', icon: FaWallet }
@@ -29,6 +35,28 @@ const OrderCard = ({ order, onCancel }) => {
   const handleCancel = () => {
     if (window.confirm('Bạn có chắc chắn muốn hủy đơn hàng này?')) {
       onCancel(order.id);
+    }
+  };
+
+  const handleReorder = () => {
+    try {
+      if (!order.details || order.details.length === 0) {
+        showError('Không có sản phẩm trong đơn hàng để mua lại');
+        return;
+      }
+
+      const result = reorderItems(order.details);
+      if (result.success) {
+        showSuccess('Đã thêm sản phẩm vào giỏ hàng. Chuyển đến trang thanh toán...');
+        setTimeout(() => {
+          navigate('/checkout');
+        }, 500);
+      } else {
+        showError(result.message || 'Có lỗi xảy ra khi mua lại');
+      }
+    } catch (error) {
+      console.error('Reorder error:', error);
+      showError('Có lỗi xảy ra khi mua lại');
     }
   };
 
@@ -88,7 +116,7 @@ const OrderCard = ({ order, onCancel }) => {
               Xem chi tiết
             </Link>
             
-            {order.status === 'pending' && (
+            {(order.status === 'pending' || order.status === 'waiting_for_pickup') && (
               <button 
                 onClick={handleCancel}
                 className="inline-flex items-center justify-center gap-2 text-red-700 px-4 py-2 rounded-lg font-medium hover:bg-red-50 transition-colors border border-red-700 text-sm"
@@ -98,7 +126,10 @@ const OrderCard = ({ order, onCancel }) => {
             )}
             
             {order.status === 'delivered' && (
-              <button className="inline-flex items-center justify-center gap-2 text-green-700 px-4 py-2 rounded-lg font-medium hover:bg-green-50 transition-colors border border-green-700 text-sm">
+              <button 
+                onClick={handleReorder}
+                className="inline-flex items-center justify-center gap-2 text-green-700 px-4 py-2 rounded-lg font-medium hover:bg-green-50 transition-colors border border-green-700 text-sm"
+              >
                 <FaShoppingBag className="w-4 h-4" />
                 Mua lại
               </button>

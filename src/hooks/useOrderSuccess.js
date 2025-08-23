@@ -18,7 +18,6 @@ export const useOrderSuccess = () => {
           try {
             await orderService.sendOrderEmail(orderId);
             localStorage.setItem(emailSentKey, 'true');
-            console.log('COD order success email sent successfully');
           } catch (emailError) {
             console.error('Failed to send COD order email:', emailError);
             hasSentEmail.current = false;

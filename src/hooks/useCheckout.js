@@ -4,15 +4,41 @@ import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import { orderService } from '../services/orderService';
+import { createAuthenticatedAxios, endpoints } from '../utils/axiosConfig';
 
 export const useCheckout = () => {
   const navigate = useNavigate();
-  const { getSelectedCartItems, getSelectedAmount, syncCartWithBackend } = useCart();
+  const { getSelectedCartItems, getSelectedAmount, syncCartWithBackend, addToCart } = useCart();
   const { showSuccess, showError } = useToast();
   const { user } = useAuth();
 
-  const selectedItems = getSelectedCartItems();
-  const totalAmount = getSelectedAmount();
+  // Helper function to remove cart item by cartItemId
+  const removeCartItemById = async (cartItemId) => {
+    try {
+      const api = createAuthenticatedAxios();
+      await api.delete(`${endpoints['cart-items']}${cartItemId}/`);
+      return { success: true };
+    } catch (error) {
+      console.error('Error removing cart item:', error);
+      return { success: false };
+    }
+  };
+
+  // Check for buy now item first, otherwise use cart items
+  const getBuyNowItem = () => {
+    const buyNowData = localStorage.getItem('buyNowItem');
+    if (!buyNowData) return null;
+    
+    const parsedData = JSON.parse(buyNowData);
+    // Support both single item (buy now) and array of items (reorder)
+    return Array.isArray(parsedData) ? parsedData : [parsedData];
+  };
+
+  const buyNowItems = getBuyNowItem();
+  const selectedItems = buyNowItems || getSelectedCartItems();
+  const totalAmount = buyNowItems 
+    ? buyNowItems.reduce((sum, item) => sum + (item.total_price || 0), 0)
+    : getSelectedAmount();
 
   const [deliveryType, setDeliveryType] = useState("pickup");
   const [paymentMethod, setPaymentMethod] = useState("cod");
@@ -123,33 +149,76 @@ export const useCheckout = () => {
     setIsProcessing(true);
 
     try {
-      const orderData = {
-        delivery_type: deliveryType,
-        payment_method: paymentMethod,
-        selected_items: selectedItems
-          .map((item) => item.cartItemId || item.id || item.cart_item_id)
-          .filter((id) => id !== undefined),
-        shipping_info:
-          deliveryType === "delivery"
-            ? {
-                full_name: shippingInfo.fullName,
-                phone: shippingInfo.phone,
-                province:
-                  provinces.find(
-                    (p) => p.code.toString() === shippingInfo.province
-                  )?.name || shippingInfo.province,
-                district:
-                  districts.find(
-                    (d) => d.code.toString() === shippingInfo.district
-                  )?.name || shippingInfo.district,
-                ward:
-                  wards.find((w) => w.code.toString() === shippingInfo.ward)
-                    ?.name || shippingInfo.ward,
-                address: shippingInfo.address,
-                note: shippingInfo.note,
-              }
-            : null,
-      };
+      // If buy now, temporarily add to cart first
+      let orderData;
+      let tempCartItemIds = [];
+
+      if (buyNowItems && buyNowItems.length > 0) {
+        // Add buy now items to cart temporarily
+        for (const item of buyNowItems) {
+          const result = await addToCart(item, item.quantity);
+          if (!result.success) {
+            throw new Error(result.message || 'Không thể thêm sản phẩm vào giỏ hàng');
+          }
+          if (result.cartItemId) {
+            tempCartItemIds.push(result.cartItemId);
+          }
+        }
+
+        orderData = {
+          delivery_type: deliveryType,
+          payment_method: paymentMethod,
+          selected_items: tempCartItemIds,
+          shipping_info:
+            deliveryType === "delivery"
+              ? {
+                  full_name: shippingInfo.fullName,
+                  phone: shippingInfo.phone,
+                  province:
+                    provinces.find(
+                      (p) => p.code.toString() === shippingInfo.province
+                    )?.name || shippingInfo.province,
+                  district:
+                    districts.find(
+                      (d) => d.code.toString() === shippingInfo.district
+                    )?.name || shippingInfo.district,
+                  ward:
+                    wards.find((w) => w.code.toString() === shippingInfo.ward)
+                      ?.name || shippingInfo.ward,
+                  address: shippingInfo.address,
+                  note: shippingInfo.note,
+                }
+              : null,
+        };
+      } else {
+        orderData = {
+          delivery_type: deliveryType,
+          payment_method: paymentMethod,
+          selected_items: selectedItems
+            .map((item) => item.cartItemId || item.id || item.cart_item_id)
+            .filter((id) => id !== undefined),
+          shipping_info:
+            deliveryType === "delivery"
+              ? {
+                  full_name: shippingInfo.fullName,
+                  phone: shippingInfo.phone,
+                  province:
+                    provinces.find(
+                      (p) => p.code.toString() === shippingInfo.province
+                    )?.name || shippingInfo.province,
+                  district:
+                    districts.find(
+                      (d) => d.code.toString() === shippingInfo.district
+                    )?.name || shippingInfo.district,
+                  ward:
+                    wards.find((w) => w.code.toString() === shippingInfo.ward)
+                      ?.name || shippingInfo.ward,
+                  address: shippingInfo.address,
+                  note: shippingInfo.note,
+                }
+              : null,
+        };
+      }
 
       const response = await orderService.createOrder(orderData);
 
@@ -180,7 +249,23 @@ export const useCheckout = () => {
           }
         }
 
+        // Clear buy now item if exists and sync cart to remove temporary items
+        if (buyNowItems) {
+          localStorage.removeItem('buyNowItem');
+          // Try to remove temporary cart items (may fail if backend already removed them)
+          for (const cartItemId of tempCartItemIds) {
+            try {
+              await removeCartItemById(cartItemId);
+            } catch (removeError) {
+              // Backend may have already removed the items when creating order
+              // This is expected behavior, so we don't need to log it
+            }
+          }
+        }
+        
+        // Always sync cart to ensure UI is updated
         await syncCartWithBackend();
+        
         showSuccess("Đặt hàng thành công!");
 
         setTimeout(() => {
