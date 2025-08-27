@@ -2,10 +2,12 @@ import { useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { orderService } from '../services/orderService';
 import { useToast } from '../context/ToastContext';
+import { useNotifications } from '../context/NotificationContext';
 
 export const usePaymentResult = () => {
   const [searchParams] = useSearchParams();
   const { showSuccess, showError } = useToast();
+  const { addNotification, notifications } = useNotifications();
   
   const [isLoading, setIsLoading] = useState(true);
   const [paymentResult, setPaymentResult] = useState(null);
@@ -73,9 +75,21 @@ export const usePaymentResult = () => {
             message: 'Thanh toán thành công! Đơn hàng của bạn đã được xác nhận.' 
           });
           setOrderInfo(response);
-          if (!hasShownToast.current) {
-            showSuccess('Thanh toán VNPay thành công!');
-            hasShownToast.current = true;
+          
+          // Thêm notification manual cho VNPay chỉ khi chưa có notification từ WebSocket
+          const existingNotification = notifications.find(notif => 
+            notif.data?.order_id === orderId && notif.data?.type === 'order_created'
+          );
+          
+          if (!existingNotification) {
+            addNotification({
+              title: 'Đặt hàng thành công',
+              body: `Đặt hàng thành công! Đơn hàng #${orderId}`,
+              data: {
+                type: 'order_created',
+                order_id: orderId
+              }
+            });
           }
 
           // Send email notification
@@ -136,7 +150,7 @@ export const usePaymentResult = () => {
     };
 
     checkPaymentResult();
-  }, [searchParams, showSuccess, showError]);
+  }, [searchParams, showSuccess, showError, addNotification, notifications]);
 
   return {
     isLoading,

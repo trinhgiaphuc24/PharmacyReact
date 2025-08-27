@@ -16,7 +16,7 @@ import MedicineDetailTabs from "../features/MedicineDetail/MedicineDetailTabs";
 const MedicineDetail = () => {
   const navigate = useNavigate();
   const { addToCart, buyNow } = useCart();
-  const { showSuccess, showError } = useToast();
+  const { showSuccess } = useToast();
   const {
     medicine,
     loading,
@@ -34,8 +34,6 @@ const MedicineDetail = () => {
       const result = await addToCart(medicine, quantity);
       if (result.success) {
         showSuccess(`Đã thêm ${quantity} ${medicine.name} vào giỏ hàng!`);
-      } else {
-        showError(result.message || 'Không thể thêm vào giỏ hàng');
       }
     }
   };
@@ -45,9 +43,7 @@ const MedicineDetail = () => {
       const result = buyNow(medicine, quantity);
       if (result.success) {
         navigate('/checkout');
-      } else {
-        showError(result.message || 'Không thể thực hiện mua ngay');
-      }
+      } 
     }
   };
 
@@ -59,18 +55,9 @@ const MedicineDetail = () => {
     );
   }
 
-  if (!medicine) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="text-gray-500">Không tìm thấy sản phẩm</div>
-      </div>
-    );
-  }
-
   return (
     <Base>
       <Header />
-      {/* Section 1: Product Overview */}
       <div className="bg-white py-8 border-b">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-8 px-4 sm:px-6 md:px-8 lg:px-16 xl:px-24">
           <ImageGallery 
@@ -93,7 +80,6 @@ const MedicineDetail = () => {
         </div>
       </div>
       
-      {/* Section 2: Detailed Information */}
       <MedicineDetailTabs 
         medicine={medicine}
         tab={tab}

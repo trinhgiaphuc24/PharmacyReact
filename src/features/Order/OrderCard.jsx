@@ -110,7 +110,7 @@ const OrderCard = ({ order, onCancel }) => {
           {/* Action buttons */}
           <div className="flex flex-col gap-2 min-w-[140px]">
             <Link
-              to={`/order-detail/${order.id}`}
+              to={`/orders/${order.id}`}
               className="inline-flex items-center justify-center gap-2 bg-green-700 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-800 transition-colors text-sm"
             >                          
               Xem chi tiết

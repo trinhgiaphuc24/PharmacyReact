@@ -1,69 +1,27 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import SmartToyIcon from "@mui/icons-material/SmartToy";
 import InfoIcon from "@mui/icons-material/Info";
-import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
-import axios, { endpoints } from "../utils/axiosConfig";
+import { useChatbot } from "../context/ChatContext";
 
 const Base = ({ children }) => {
   const navigate = useNavigate();
-  const [showChat, setShowChat] = useState(false);
-  const [input, setInput] = useState("");
-  const [messages, setMessages] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [sessionId, setSessionId] = useState(null);
+  const {
+    showChat,
+    setShowChat,
+    input,
+    setInput,
+    messages,
+    setMessages,
+    loading,
+    setLoading,
+    clearChatHistory,
+    sendMessageToBot,
+    handleSendMessage,
+  } = useChatbot();
+  
   const messagesEndRef = useRef(null);
-
-  // Khôi phục hoặc tạo mới session ID và messages
-  useEffect(() => {
-    // Khôi phục sessionId từ localStorage
-    let savedSessionId = localStorage.getItem("chatbot_session_id");
-    let savedMessages = localStorage.getItem("chatbot_messages");
-
-    if (!savedSessionId) {
-      // Tạo session ID mới nếu chưa có
-      savedSessionId =
-        "session_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
-      localStorage.setItem("chatbot_session_id", savedSessionId);
-    }
-
-    setSessionId(savedSessionId);
-
-    // Khôi phục messages từ localStorage
-    if (savedMessages) {
-      try {
-        const parsedMessages = JSON.parse(savedMessages);
-        setMessages(parsedMessages);
-      } catch (error) {
-        console.error("Lỗi khi khôi phục messages:", error);
-        // Nếu lỗi, tạo message mặc định
-        const defaultMessages = [
-          {
-            from: "bot",
-            content:
-              "Chào bạn! Tôi là chatbot tư vấn thuốc. Tôi có thể giúp gì cho bạn?",
-          },
-        ];
-        setMessages(defaultMessages);
-        localStorage.setItem(
-          "chatbot_messages",
-          JSON.stringify(defaultMessages)
-        );
-      }
-    } else {
-      // Nếu chưa có messages, tạo message mặc định
-      const defaultMessages = [
-        {
-          from: "bot",
-          content:
-            "Chào bạn! Tôi là chatbot tư vấn thuốc. Tôi có thể giúp gì cho bạn?",
-        },
-      ];
-      setMessages(defaultMessages);
-      localStorage.setItem("chatbot_messages", JSON.stringify(defaultMessages));
-    }
-  }, []);
 
   // Auto scroll to bottom
   useEffect(() => {
@@ -85,32 +43,6 @@ const Base = ({ children }) => {
     }
   }, [showChat]);
 
-  // Lưu messages vào localStorage mỗi khi có thay đổi
-  useEffect(() => {
-    if (messages.length > 0) {
-      localStorage.setItem("chatbot_messages", JSON.stringify(messages));
-    }
-  }, [messages]);
-
-  // Xóa lịch sử chat
-  const clearChatHistory = () => {
-    const defaultMessages = [
-      {
-        from: "bot",
-        content:
-          "Chào bạn! Tôi là chatbot tư vấn thuốc. Tôi có thể giúp gì cho bạn?",
-      },
-    ];
-    setMessages(defaultMessages);
-    localStorage.setItem("chatbot_messages", JSON.stringify(defaultMessages));
-
-    // Tạo sessionId mới
-    const newSessionId =
-      "session_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
-    setSessionId(newSessionId);
-    localStorage.setItem("chatbot_session_id", newSessionId);
-  };
-
   // Component hiển thị medicine card
   const MedicineCard = ({ medicine, setInput, setMessages, setLoading, loading, sendMessageToBot }) => {
     const handleViewDetail = () => {
@@ -120,13 +52,6 @@ const Base = ({ children }) => {
         // Navigate đến trang chi tiết thuốc
         navigate(`/medicines/${medicine.id}/`);
       }
-    };
-
-    const handleAddToCart = (e) => {
-      e.stopPropagation(); // Prevent triggering the detail view
-      // TODO: Implement add to cart functionality
-      console.log("Add to cart:", medicine.name);
-      // You can implement actual cart logic here
     };
 
     const handleAskAboutMedicine = (e) => {
@@ -144,7 +69,6 @@ const Base = ({ children }) => {
             {
               from: "user",
               content: medicineQuestion,
-              timestamp: new Date().toISOString(),
             },
           ]);
 
@@ -166,7 +90,6 @@ const Base = ({ children }) => {
               {
                 from: "bot",
                 content: botResponse,
-                timestamp: new Date().toISOString(),
                 isStructured: true,
               },
             ]);
@@ -178,7 +101,6 @@ const Base = ({ children }) => {
                 from: "bot",
                 content:
                   "Xin lỗi, tôi gặp sự cố khi xử lý câu hỏi của bạn. Vui lòng thử lại.",
-                timestamp: new Date().toISOString(),
               },
             ]);
           } finally {
@@ -259,15 +181,6 @@ const Base = ({ children }) => {
               >
                 <SmartToyIcon fontSize="small" />
                 <span>Hỏi đáp</span>
-              </button>
-
-              <button
-                onClick={handleAddToCart}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium py-2 px-2 rounded-lg transition-all duration-200 flex items-center justify-center gap-1 hover:shadow-md"
-                title="Thêm vào giỏ hàng"
-              >
-                <ShoppingCartIcon fontSize="small" />
-                <span>Giỏ hàng</span>
               </button>
             </div>
           </div>
@@ -686,97 +599,12 @@ const Base = ({ children }) => {
     );
   };
 
-  // Gửi tin nhắn tới chatbot API
-  const sendMessageToBot = async (userMessage) => {
-    try {
-      const response = await axios.post(endpoints.chatbot, {
-        message: userMessage,
-        session_id: sessionId,
-      });
-
-      console.log("API Response:", response.data); // Debug log
-
-      // Trả về toàn bộ response data để component có thể render structured
-      return response.data;
-    } catch (error) {
-      console.error("Lỗi chatbot:", error);
-      if (error.response?.status === 500) {
-        return {
-          response_type: "error",
-          message:
-            "Xin lỗi, hệ thống tư vấn đang gặp sự cố. Vui lòng thử lại sau ít phút.",
-        };
-      }
-      return {
-        response_type: "error",
-        message:
-          "Xin lỗi, tôi không thể kết nối được. Vui lòng kiểm tra kết nối internet và thử lại.",
-      };
-    }
-  };
-
   const handleSend = async (e) => {
     e.preventDefault();
     if (!input.trim() || loading) return;
 
     const userMessage = input.trim();
-    setInput("");
-    setLoading(true);
-
-    // Thêm tin nhắn user
-    setMessages((msgs) => [
-      ...msgs,
-      {
-        from: "user",
-        content: userMessage,
-        timestamp: new Date().toISOString(),
-      },
-    ]);
-
-    // Thêm typing indicator
-    setMessages((msgs) => [
-      ...msgs,
-      { from: "bot", content: "Đang trả lời...", isTyping: true },
-    ]);
-
-    try {
-      // Gửi tới chatbot API
-      const botResponse = await sendMessageToBot(userMessage);
-
-      // Xóa typing indicator và thêm phản hồi thật
-      setMessages((msgs) => [
-        ...msgs.filter((msg) => !msg.isTyping),
-        {
-          from: "bot",
-          content: botResponse,
-          timestamp: new Date().toISOString(),
-          isStructured: true,
-        },
-      ]);
-    } catch (error) {
-      // Xóa typing indicator và hiển thị lỗi
-      setMessages((msgs) => [
-        ...msgs.filter((msg) => !msg.isTyping),
-        {
-          from: "bot",
-          content:
-            "Xin lỗi, tôi gặp sự cố khi xử lý câu hỏi của bạn. Vui lòng thử lại.",
-          timestamp: new Date().toISOString(),
-        },
-      ]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Format timestamp
-  const formatTime = (timestamp) => {
-    if (!timestamp) return "";
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString("vi-VN", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    await handleSendMessage(userMessage);
   };
 
   return (
@@ -848,13 +676,6 @@ const Base = ({ children }) => {
                   msg.from === "user" ? "justify-end" : "justify-start"
                 }`}
               >
-                {msg.from === "bot" && (
-                  <img
-                    src="https://cdn-icons-png.flaticon.com/512/4712/4712035.png"
-                    alt="bot"
-                    className="w-8 h-8 rounded-full mr-3 border-2 border-green-300 bg-white flex-shrink-0 mt-1"
-                  />
-                )}
                 <div
                   className={`flex flex-col ${
                     msg.from === "user"
@@ -894,19 +715,7 @@ const Base = ({ children }) => {
                       </div>
                     )}
                   </div>
-                  {msg.timestamp && !msg.isTyping && (
-                    <span className="text-xs text-gray-500 mt-1 px-1">
-                      {formatTime(msg.timestamp)}
-                    </span>
-                  )}
                 </div>
-                {msg.from === "user" && (
-                  <img
-                    src="https://cdn-icons-png.flaticon.com/512/1946/1946429.png"
-                    alt="user"
-                    className="w-8 h-8 rounded-full ml-3 border-2 border-gray-300 bg-white flex-shrink-0 mt-1"
-                  />
-                )}
               </div>
             ))}
             <div ref={messagesEndRef} />

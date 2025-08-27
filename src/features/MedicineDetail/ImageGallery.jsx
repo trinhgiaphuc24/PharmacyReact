@@ -1,8 +1,7 @@
 import React from 'react';
 
 const ImageGallery = ({ images, selectedImg, setSelectedImg }) => {
-  const defaultImage = "https://via.placeholder.com/100x100?text=No+Image";
-  const mainImage = images && images.length > 0 ? images[selectedImg]?.imgMedicineUrl : defaultImage;
+  const mainImage = images[selectedImg]?.imgMedicineUrl;
 
   return (
     <div className="flex flex-col items-center md:w-1/3">

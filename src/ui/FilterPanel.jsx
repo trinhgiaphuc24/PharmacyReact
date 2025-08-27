@@ -1,7 +1,6 @@
 // src/components/FilterPanel/FilterPanel.jsx
 import React from "react";
 import ProduceList from "../features/Produce/ProduceList";
-import { Button } from "react-bootstrap";
 
 const FilterPanel = ({
   minPrice,
@@ -13,7 +12,23 @@ const FilterPanel = ({
   updatePriceParams,
   handleFilterSubmit,
   setSearchParams,
+  produces,
+  produceLoading,
 }) => {
+  const handleProduceSelect = (produceName) => {
+    setBrand(produceName);
+    
+    setSearchParams((prev) => {
+      const newParams = new URLSearchParams(prev);
+      if (produceName) {
+        newParams.set("produce", produceName);
+      } else {
+        newParams.delete("produce");
+      }
+      newParams.set("page", "1");
+      return newParams;
+    });
+  };
   return (
     <div className="lg:col-span-2 bg-white rounded-xl shadow p-2">
       <h2 className="text-lg mb-4 text-green-700 text-xl font-bold">Bộ lọc</h2>
@@ -46,10 +61,20 @@ const FilterPanel = ({
           Áp dụng
         </button>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-5">
-            Khoảng giá nhanh
-          </label>
           <div className="flex flex-col gap-2">
+            <label>
+              <input
+                type="radio"
+                name="quickPrice"
+                checked={minPrice === "" && maxPrice === ""}
+                onChange={() => {
+                  setMinPrice("");
+                  setMaxPrice("");
+                  updatePriceParams("", "");
+                }}
+              />{" "}
+              Tất cả
+            </label>
             <label>
               <input
                 type="radio"
@@ -105,9 +130,11 @@ const FilterPanel = ({
             Nơi sản xuất
           </label>
           <ProduceList
-            value={brand}
-            onChange={setBrand}
-            setSearchParams={setSearchParams}
+            produces={produces}
+            loading={produceLoading}
+            error={null}
+            selected={brand}
+            onSelect={handleProduceSelect}
           />
         </div>
       </form>

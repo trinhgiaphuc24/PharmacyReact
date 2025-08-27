@@ -30,7 +30,7 @@ const PaymentSuccess = ({ paymentResult, orderInfo }) => {
       
       <div className="flex flex-col sm:flex-row gap-4 justify-center">
         <Link
-          to={orderInfo ? `/order-detail/${orderInfo.order_id}` : '/orders'}
+          to={orderInfo ? `/orders/${orderInfo.order_id}` : '/orders'}
           className="bg-green-700 text-white px-6 py-3 rounded-lg hover:bg-green-800 transition font-semibold"
         >
           Xem chi tiết đơn hàng

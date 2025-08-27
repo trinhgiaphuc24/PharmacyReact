@@ -14,6 +14,7 @@ from rest_framework.views import APIView
 from pharmacies.models import *
 from pharmacies import serializers, paginators, perms
 from pharmacies.email_service import EmailService
+from pharmacies.firebase_service import FirebaseService
 from rest_framework.response import Response
 from rest_framework.decorators import action, api_view, permission_classes
 from django.db.models import Q
@@ -30,7 +31,8 @@ from .serializers import OrderSerializer, CreateOrderSerializer, ShippingFeeSeri
 class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
     queryset = User.objects.filter(is_active=True)
     serializer_class = serializers.UserSerializer
-    parser_classes = [parsers.MultiPartParser]
+    # Support both JSON and multipart form data
+    parser_classes = [parsers.MultiPartParser, parsers.JSONParser]
     permission_classes = [AllowAny]
 
     @action(methods=['GET', 'PUT'], url_path='current-user', detail=False, permission_classes=[IsAuthenticated])
@@ -44,6 +46,35 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_200_OK)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(methods=['POST'], url_path='update-fcm-token', detail=False, permission_classes=[IsAuthenticated])
+    def update_fcm_token(self, request):
+        """Cập nhật FCM token cho user để nhận push notification"""
+        print(f"📱 Received FCM token update request for user: {request.user.id}")
+        
+        fcm_token = request.data.get('fcm_token')
+        print(f"🔑 FCM token received: {fcm_token}")
+        
+        if not fcm_token:
+            print("❌ No FCM token provided in request")
+            return Response({
+                'success': False,
+                'message': 'FCM token is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        user = request.user
+        old_token = user.fcm_token
+        user.fcm_token = fcm_token
+        user.save()
+        
+        print(f"✅ FCM token updated successfully for user {user.id}")
+        print(f"🔄 Old token: {old_token}")
+        print(f"🆕 New token: {fcm_token}")
+        
+        return Response({
+            'success': True,
+            'message': 'FCM token updated successfully'
+        }, status=status.HTTP_200_OK)
 
 
 class MedicineGenreViewSet(viewsets.ViewSet, generics.ListAPIView):
@@ -256,6 +287,25 @@ class OrderViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIV
         if serializer.is_valid():
             try:
                 order = serializer.save()
+                
+                # Gửi Firebase notification nếu user có FCM token
+                print(f"🔥 Checking Firebase notification for user: {request.user.id}")
+                print(f"🔑 User FCM token: {request.user.fcm_token}")
+                
+                if request.user.fcm_token:
+                    try:
+                        print(f"📱 Sending Firebase notification for order: {order.id}")
+                        FirebaseService.send_order_notification(
+                            user_token=request.user.fcm_token,
+                            order=order
+                        )
+                        print(f"✅ Firebase notification sent successfully")
+                    except Exception as firebase_error:
+                        # Log lỗi nhưng không làm fail việc tạo order
+                        print(f"❌ Firebase notification error: {firebase_error}")
+                else:
+                    print(f"⚠️ No FCM token found for user {request.user.id}")
+                
                 order_serializer = OrderSerializer(order, context={'request': request})
                 return Response({
                     'success': True,
@@ -327,15 +377,114 @@ class OrderViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIV
                 'success': False,
                 'message': 'Trạng thái mới là bắt buộc'
             }, status=status.HTTP_400_BAD_REQUEST)
+        
+        old_status = order.status
         order.status = new_status
         order.save()
+        
+        # Gửi Firebase notification về thay đổi trạng thái
+        if order.user.fcm_token and old_status != new_status:
+            try:
+                FirebaseService.send_order_status_notification(
+                    user_token=order.user.fcm_token,
+                    order=order,
+                    new_status=new_status
+                )
+            except Exception as firebase_error:
+                # Log lỗi nhưng không làm fail việc cập nhật status
+                print(f"Firebase status notification error: {firebase_error}")
+        
         serializer = OrderSerializer(order, context={'request': request})
         return Response({
             'success': True,
             'message': 'Cập nhật trạng thái thành công',
             'data': serializer.data
         })
+    
+    @action(detail=True, methods=['patch'], url_path='update-shipping')
+    def update_shipping(self, request, pk=None):
+        try:
+            order = Order.objects.filter(pk=pk, user=request.user).first()
+            if not order:
+                return Response({
+                    'success': False,
+                    'message': 'Không tìm thấy đơn hàng'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # Only allow editing for pending or waiting orders
+            if order.status not in ['pending', 'waiting_for_pickup']:
+                return Response({
+                    'success': False,
+                    'message': 'Chỉ có thể chỉnh sửa đơn hàng đang chờ xử lý hoặc chờ lấy hàng'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Get shipping information from request
+            full_name = request.data.get('full_name')
+            phone_number = request.data.get('phoneNumber')
+            specific = request.data.get('specific')
+            commune = request.data.get('commune')
+            district = request.data.get('district')
+            province = request.data.get('province')
+            note = request.data.get('note')
+            
+            # Validate required fields
+            if not full_name or not phone_number:
+                return Response({
+                    'success': False,
+                    'message': 'Vui lòng điền đầy đủ thông tin bắt buộc'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Validate phone number (allow flexible format)
+            # import re
+            # # Accept various phone formats: 10-11 digits starting with 0
+            # phone_pattern = r'^0[0-9]{8,10}$'
+            # if not re.match(phone_pattern, phone_number):
+            #     return Response({
+            #         'success': False,
+            #         'message': 'Số điện thoại phải có 9-11 số và bắt đầu bằng 0'
+            #     }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Update OnlineOrderShip
+            online_order = getattr(order, 'online_order', None)
+            if online_order:
+                ship_info, created = OnlineOrderShip.objects.get_or_create(
+                    online_order=online_order,
+                    defaults={
+                        'full_name': full_name,
+                        'phoneNumber': phone_number,
+                        'specific': specific or '',
+                        'commune': commune or '',
+                        'district': district or '',
+                        'province': province or '',
+                        'note': note or ''
+                    }
+                )
+                
+                if not created:
+                    ship_info.full_name = full_name
+                    ship_info.phoneNumber = phone_number
+                    ship_info.specific = specific or ''
+                    ship_info.commune = commune or ''
+                    ship_info.district = district or ''
+                    ship_info.province = province or ''
+                    ship_info.note = note or ''
+                    ship_info.save()
+            
+            # Return updated order data
+            serializer = OrderSerializer(order, context={'request': request})
+            return Response({
+                'success': True,
+                'message': 'Cập nhật thông tin giao hàng thành công',
+                'data': serializer.data
+            })
+            
+        except Exception as e:
+            return Response({
+                'success': False,
+                'message': f'Lỗi cập nhật thông tin: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    
     def remove_vietnamese_accents(self, text):
         """Remove Vietnamese accents from text"""
         if not text:
@@ -423,7 +572,7 @@ class OrderViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIV
             # Invoice title
             p.setFillColorRGB(0, 0, 0)
             p.setFont("Times-Bold", 16)
-            text = self.remove_vietnamese_accents("HOA DON BAN LE")
+            text = self.remove_vietnamese_accents("HOA DON BAN THUOC")
             text_width = p.stringWidth(text, "Times-Bold", 16)
             p.drawString((width - text_width) / 2, height - 50*mm, text)
             
@@ -533,7 +682,7 @@ class OrderViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIV
             
             # Summary background rectangle
             p.setFillColorRGB(0.95, 0.95, 0.95)
-            p.rect(20*mm, y_position - 25*mm, width - 40*mm, 25*mm, fill=1)
+            p.rect(20*mm, y_position - 27*mm, width - 40*mm, 25*mm, fill=1)
             
             # Summary content
             p.setFillColorRGB(0, 0, 0)
@@ -557,12 +706,13 @@ class OrderViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIV
             p.drawString(25*mm, y_position, "TONG CONG:")
             p.drawRightString(width - 25*mm, y_position, f"{int(order.total):,} VND")
             
+            
             # Footer with signature
             p.setFillColorRGB(0, 0, 0)
             p.setFont("Times-Roman", 10)
             signature_y = 50*mm
             current_date = order.createdAt.strftime('%d/%m/%Y') if order.createdAt else order.date.strftime('%d/%m/%Y')
-            text = f"Hai Phong, ngay {current_date}"
+            text = f"{current_date}"
             text_width = p.stringWidth(text, "Times-Roman", 10)
             p.drawString((width - text_width) / 2, signature_y, text)
             

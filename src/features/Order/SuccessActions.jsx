@@ -14,7 +14,7 @@ const SuccessActions = ({ orderId }) => {
       </Link>
       
       <Link 
-        to={orderId ? `/order-detail/${orderId}` : "/orders"}
+        to={orderId ? `/orders/${orderId}` : "/orders"}
         className="inline-flex items-center gap-2 bg-white border-2 border-green-700 text-green-700 px-8 py-3 rounded-lg font-semibold hover:bg-green-50 transition"
       >
         <FaClipboardList />

@@ -31,7 +31,6 @@ const MedicineGenre = () => {
 
   return (
     <div className="m-2 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-      {/* Danh sách genres từ API */}
       {genres.map((genre) => (
         <div
           key={genre.id}

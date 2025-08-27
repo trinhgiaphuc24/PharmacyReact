@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import axios, { endpoints } from "../utils/axiosConfig";
 
@@ -10,6 +10,8 @@ export const useMedicine = () => {
   const [loading, setLoading] = useState(true);
   const [medicines, setMedicines] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
+  const [produces, setProduces] = useState([]);
+  const [produceLoading, setProduceLoading] = useState(true);
   const [searchParams, setSearchParams] = useSearchParams();
 
   const page = parseInt(searchParams.get("page") || "1", 10);
@@ -20,13 +22,22 @@ export const useMedicine = () => {
   const q = searchParams.get("q") || "";
 
   useEffect(() => {
-    setMinPrice(min_price);
-    setMaxPrice(max_price);
-    setBrand(produce);
     setSearchQuery(q);
-  }, [min_price, max_price, produce, q]);
+  }, [q]);
 
-  const loadMedicines = async () => {
+  useEffect(() => {
+    axios.get(endpoints.produces)
+      .then((res) => {
+        setProduces(res.data);
+        setProduceLoading(false);
+      })
+      .catch(() => {
+        setProduces([]);
+        setProduceLoading(false);
+      });
+  }, []);
+
+  const loadMedicines = useCallback(async () => {
     setLoading(true);
     let url = `${endpoints.medicines}?page=${page}`;
     if (q) url += `&q=${encodeURIComponent(q)}`;
@@ -51,38 +62,45 @@ export const useMedicine = () => {
     } finally {
       setLoading(false);
     }
-  };
-
+  }, [page, q, produce, min_price, max_price, genre]);
+  
   useEffect(() => {
     loadMedicines();
-  }, [page, q, produce, min_price, max_price, genre]); 
+  }, [loadMedicines]); 
+
+  const updateParams = (newValues, resetPage = true) => {
+    const newParams = new URLSearchParams(searchParams);
+    
+    if (resetPage) {
+      newParams.set("page", "1");
+    }
+    
+    Object.entries(newValues).forEach(([key, value]) => {
+      if (value) {
+        newParams.set(key, value);
+      } else {
+        newParams.delete(key);
+      }
+    });
+    
+    setSearchParams(newParams);
+  };
 
   const handlePageChange = (newPage) => {
-    const newParams = new URLSearchParams(searchParams);
-    newParams.set("page", newPage);
-    setSearchParams(newParams);
+    updateParams({ page: newPage }, false);
   };
 
   const updatePriceParams = (min, max) => {
-    const newParams = new URLSearchParams(searchParams);
-    newParams.set("page", "1");
-    if (min) newParams.set("min_price", min);
-    else newParams.delete("min_price");
-
-    if (max) newParams.set("max_price", max);
-    else newParams.delete("max_price");
-
-    setSearchParams(newParams);
+    updateParams({ min_price: min, max_price: max });
   };
 
   const handleFilterSubmit = (e) => {
     e.preventDefault();
-    const newParams = new URLSearchParams();
-    newParams.set("page", "1");
-    if (brand) newParams.set("produce", brand);
-    if (minPrice) newParams.set("min_price", minPrice);
-    if (maxPrice) newParams.set("max_price", maxPrice);
-    setSearchParams(newParams);
+    updateParams({
+      produce: brand,
+      min_price: minPrice,
+      max_price: maxPrice
+    });
   };
 
   const handleSearchSubmit = (e) => {
@@ -97,14 +115,7 @@ export const useMedicine = () => {
       return;
     }
     
-    const newParams = new URLSearchParams(searchParams);
-    newParams.set("page", "1");
-    if (newQuery) {
-      newParams.set("q", newQuery);
-    } else {
-      newParams.delete("q");
-    }
-    setSearchParams(newParams);
+    updateParams({ q: newQuery || undefined });
   };
 
   return {
@@ -120,8 +131,11 @@ export const useMedicine = () => {
     medicines,
     totalPages,
     page,
+    produces,
+    produceLoading,
     
     handlePageChange,
+    updateParams,
     updatePriceParams,
     handleFilterSubmit,
     handleSearchSubmit,

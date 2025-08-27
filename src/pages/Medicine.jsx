@@ -30,7 +30,9 @@ const Medicine = () => {
     updatePriceParams,
     handleFilterSubmit,
     handleSearchSubmit,
-    setSearchParams
+    setSearchParams,
+    produces,
+    produceLoading
   } = useMedicine();
 
   if (loading && medicines.length === 0) {
@@ -71,6 +73,8 @@ const Medicine = () => {
               updatePriceParams={updatePriceParams}
               handleFilterSubmit={handleFilterSubmit}
               setSearchParams={setSearchParams}
+              produces={produces}
+              produceLoading={produceLoading}
             />
             <div className="lg:col-span-7">
               <MedicineList medicines={medicines} />

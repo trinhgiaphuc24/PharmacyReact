@@ -45,6 +45,7 @@ class User(AbstractUser):
     is_superuser = models.BooleanField(default=False)  # Super quyền
     createdAt = models.DateTimeField(auto_now_add=True, null=True)
     userRole = models.CharField(max_length=20, choices=RoleEnum.choices,default=RoleEnum.CUSTOMER)
+    fcm_token = models.TextField(blank=True, null=True)  # FCM token for push notifications
 
     def __str__(self):
         return self.username

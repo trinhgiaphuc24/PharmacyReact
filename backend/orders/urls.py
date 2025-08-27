@@ -1,6 +1,7 @@
 from django.urls import path, include
 from . import views
 from .vnpay_views import VNPayReturnView, VNPayIPNView, create_vnpay_payment, check_payment_status
+from .notification_views import update_fcm_token, get_notifications
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
@@ -20,6 +21,10 @@ router.register('shipping-fees', views.ShippingFeeViewSet, basename='shipping-fe
 urlpatterns = [
     path('', include(router.urls)),
     path('chatbot/', views.ChatBotView.as_view(), name='chatbot'),
+    
+    # Notification endpoints
+    path('update-fcm-token/', update_fcm_token, name='update-fcm-token'),
+    path('notifications/', get_notifications, name='get-notifications'),
     
     # VNPay payment endpoints
     path('vnpay/create-payment/', create_vnpay_payment, name='vnpay-create-payment'),

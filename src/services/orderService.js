@@ -123,6 +123,16 @@ export const orderService = {
         return response.data;
     },
 
+    updateShippingInfo: async (orderId, shippingData) => {
+        try {
+            const response = await api.patch(`${endpoints.orders}${orderId}/update-shipping/`, 
+                shippingData, { headers: getAuthHeaders() });
+            return response.data;
+        } catch (error) {
+            throw error;
+        }
+    },
+
     exportOrderPDF: async (orderId) => {
         try {
             // Use backend PDF generation only

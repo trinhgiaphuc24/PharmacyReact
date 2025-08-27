@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import Header from "../ui/Header";
 import Footer from "../ui/Footer";
@@ -13,6 +13,8 @@ import { useUserOrderDetail } from "../hooks/useUserOrderDetail";
 
 const OrderDetail = () => {
   const { orderId } = useParams();
+  const [searchQuery, setSearchQuery] = useState("");
+  
   const { 
     order, 
     isLoading, 
@@ -59,7 +61,7 @@ const OrderDetail = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans">
-      <Header />
+      <Header searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
       
       <div className="py-6 px-4">
         <div className="max-w-6xl mx-auto">

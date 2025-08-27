@@ -19,7 +19,7 @@ export const endpoints = {
     'order-detail': '/orders/{orderId}/',
     'create-order': '/orders/create-order/',
     'my-orders': '/orders/my-orders/',
-    'staff-all-orders': '/orders/staff-all-orders/',  // Endpoint riêng cho staff xem tất cả đơn hàng
+    'staff-all-orders': '/orders/staff-all-orders/', 
     'shipping-fees': '/shipping-fees/',
     'vnpay-create-payment': '/vnpay/create-payment/',
     'vnpay-check-status': '/vnpay/check-status/',
@@ -31,7 +31,7 @@ export default axios.create({
 });
 
 export const createAuthenticatedAxios = () => {
-    const token = localStorage.getItem('token') || localStorage.getItem('userToken');
+    const token = localStorage.getItem('token');
     return axios.create({
         baseURL: BASE_URL,
         headers: token ? {

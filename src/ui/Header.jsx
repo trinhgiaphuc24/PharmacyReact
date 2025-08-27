@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import {
   Search,
-  Bell,
   ShoppingCart,
   User,
   Menu,
@@ -11,49 +10,41 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
+import { useNotifications } from '../context/NotificationContext';
 import axios, { endpoints } from "../utils/axiosConfig";
+import NotificationCenter from "./NotificationCenter";
 
-const Header = ({
-  searchQuery,
-  setSearchQuery,
-  medicineGenres = [],
-  onSearchSubmit,
-}) => {
+const Header = ({searchQuery,setSearchQuery,onSearchSubmit,}) => {
   const navigate = useNavigate();
   const { getTotalItems } = useCart();
   const { user, isAuthenticated, isStaff, isCustomer, logout } = useAuth();
+  const { clearAllNotifications } = useNotifications();
   const cartCount = getTotalItems();
   const [showMedicineGenreMenu, setShowMedicineGenreMenu] = useState(false);
   const [genres, setGenres] = useState([]);
 
-  // Kiểm tra trạng thái đăng nhập từ AuthContext
   const isLoggedIn = isAuthenticated();
   const userIsStaff = isStaff();
   const userIsCustomer = isCustomer();
 
   const handleLogout = () => {
+    clearAllNotifications(); // Xóa tất cả notifications khi logout
+    
+    // Trigger event để Base component xóa chat
+    window.dispatchEvent(new CustomEvent('chatbot:clear'));
+    
     logout();
     navigate("/");
   };
 
-  // Lấy dữ liệu medicine genres từ API
   useEffect(() => {
-    axios
-      .get(endpoints["medicine-genres"])
-      .then((res) => {
-        setGenres(res.data);
-      })
-      .catch(() => {
-        setGenres([]);
-      });
+    axios.get(endpoints["medicine-genres"]).then((res) => {setGenres(res.data);}).catch(() => {setGenres([]);});
   }, []);
 
   const handleSearch = () => {
     if (onSearchSubmit) {
-      // If we're on a page that provides custom search handling, use it
       onSearchSubmit();
     } else {
-      // Otherwise, navigate to medicines page with search query
       if (searchQuery.trim()) {
         navigate(`/medicines?q=${encodeURIComponent(searchQuery.trim())}`);
       } else {
@@ -62,13 +53,11 @@ const Header = ({
     }
   };
 
-  // Realtime search when user types
   useEffect(() => {
     if (onSearchSubmit && searchQuery !== undefined) {
-      // Debounce search to avoid too many API calls
       const delayedSearch = setTimeout(() => {
         onSearchSubmit();
-      }, 300); // 300ms delay
+      }, 300); 
 
       return () => clearTimeout(delayedSearch);
     }
@@ -95,7 +84,6 @@ const Header = ({
           <img src="/logohome.png" alt="Logo" className="w-32 h-auto" />
         </div>
 
-        {/* Thanh tìm kiếm - hiển thị cho tất cả người dùng trừ staff */}
         {!userIsStaff && (
           <div className="flex-1 max-w-2xl mx-10 mt-5">
             <div className="relative mb-2">
@@ -115,14 +103,10 @@ const Header = ({
           </div>
         )}
 
-        {/* Spacer cho staff khi không có search bar */}
         {userIsStaff && <div className="flex-1"></div>}
 
         <div className="flex items-center gap-4">
-          {/* Chuông thông báo - chỉ hiển thị khi đã đăng nhập */}
-          {isLoggedIn && <Bell className="w-6 h-6 text-white cursor-pointer" />}
-
-          {/* Chỉ hiển thị đơn hàng và giỏ hàng cho khách hàng */}
+          <NotificationCenter />
 
           {userIsCustomer && (
             <>
@@ -150,7 +134,6 @@ const Header = ({
             </>
           )}
 
-          {/* Hiển thị nút dashboard cho staff */}
           {userIsStaff && (
             <div
               className="w-6 h-6 text-white cursor-pointer"
@@ -173,7 +156,6 @@ const Header = ({
             </div>
           )}
 
-          {/* User section */}
           {isLoggedIn ? (
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2 bg-white bg-opacity-10 px-4 py-2 rounded-full">
@@ -207,13 +189,11 @@ const Header = ({
           )}
         </div>
       </div>
-      {/* Navigation menu - hiển thị cho tất cả người dùng */}
+
       <div className="max-w-5xl mx-auto px-5 flex items-center text-sm font-medium">
-        {/* Overlay when menu is open */}
         {showMedicineGenreMenu && (
           <div className="fixed inset-0 bg-black bg-opacity-30 z-40"></div>
         )}
-        {/* Danh mục có dropdown */}
         <div className="relative z-50">
           <div
             className="flex items-center px-4 py-3 rounded-b-lg mr-8 font-medium cursor-pointer"
@@ -239,26 +219,17 @@ const Header = ({
                     onClick={() => handleGenreClick(genre.id)}
                   >
                     <div className="w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center mb-3 group-hover:bg-blue-200 transition">
-                      {genre.imgMedicineGenreUrl ? (
+                      {genre.imgMedicineGenreUrl && (
                         <img
                           src={genre.imgMedicineGenreUrl}
                           alt={genre.name}
                           className="w-10 h-10 object-contain"
                         />
-                      ) : (
-                        <span className="text-2xl">💊</span>
                       )}
                     </div>
                     <span className="text-sm font-medium">{genre.name}</span>
                   </div>
                 ))}
-
-                {/* Nếu không có dữ liệu từ API, hiển thị placeholder */}
-                {genres.length === 0 && (
-                  <div className="col-span-4 text-center text-gray-500 py-8">
-                    Đang tải danh mục...
-                  </div>
-                )}
               </div>
             </div>
           )}

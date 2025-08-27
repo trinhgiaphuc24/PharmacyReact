@@ -5,12 +5,33 @@ const StatusUpdateModal = ({ isOpen, onClose, orderId, currentStatus, onStatusCh
   if (!isOpen) return null;
 
   const statusConfig = {
-    pending: { text: "Chờ xác nhận", icon: Clock },
-    waiting_for_pickup: { text: "Chờ lấy hàng", icon: Package },
-    waiting_for_delivery: { text: "Chờ giao hàng", icon: Truck },
-    delivered: { text: "Đã giao", icon: CheckCircle },
-    canceled: { text: "Đã hủy", icon: XCircle },
+    pending: { text: "Chờ xác nhận", icon: Clock, order: 1 },
+    waiting_for_pickup: { text: "Chờ lấy hàng", icon: Package, order: 2 },
+    waiting_for_delivery: { text: "Chờ giao hàng", icon: Truck, order: 3 },
+    delivered: { text: "Đã giao", icon: CheckCircle, order: 4 },
+    canceled: { text: "Đã hủy", icon: XCircle, order: 5 },
   };
+
+  const getAllowedStatuses = (current) => {
+    const currentOrder = statusConfig[current]?.order || 0;
+    
+    switch (current) {
+      case 'pending':
+        return ['waiting_for_pickup', 'canceled'];
+      case 'waiting_for_pickup':
+        return ['waiting_for_delivery', 'canceled'];
+      case 'waiting_for_delivery':
+        return ['delivered', 'canceled'];
+      case 'delivered':
+        return [];
+      case 'canceled':
+        return [];
+      default:
+        return Object.keys(statusConfig);
+    }
+  };
+
+  const allowedStatuses = getAllowedStatuses(currentStatus);
 
   const handleStatusChange = (newStatus) => {
     onStatusChange(newStatus);
@@ -26,18 +47,26 @@ const StatusUpdateModal = ({ isOpen, onClose, orderId, currentStatus, onStatusCh
         <div className="space-y-3">
           {Object.entries(statusConfig).map(([status, config]) => {
             const StatusIcon = config.icon;
+            const isAllowed = allowedStatuses.includes(status);
+            const isCurrent = currentStatus === status;
+            
             return (
               <button
                 key={status}
-                onClick={() => handleStatusChange(status)}
+                onClick={() => isAllowed && !isCurrent ? handleStatusChange(status) : null}
+                disabled={!isAllowed}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border text-left transition-colors ${
-                  currentStatus === status
+                  isCurrent
                     ? 'border-green-500 bg-green-50 text-green-700'
-                    : 'border-gray-200 hover:bg-gray-50'
+                    : isAllowed
+                    ? 'border-gray-200 hover:bg-gray-50 cursor-pointer'
+                    : 'border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed'
                 }`}
               >
                 <StatusIcon className="w-5 h-5" />
-                <span className="font-medium">{config.text}</span>
+                <div className="flex-1">
+                  <span className="font-medium">{config.text}</span>
+                </div>
               </button>
             );
           })}

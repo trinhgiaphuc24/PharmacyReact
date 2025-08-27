@@ -10,14 +10,12 @@ const MedicineList = ({ medicines = [] }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // Kiểm tra trạng thái đăng nhập từ AuthContext
   const isLoggedIn = !!user;
 
   const handleAddToCart = async (medicine, e) => {
     e.preventDefault();
     e.stopPropagation();
     
-    // Kiểm tra đăng nhập trước
     if (!isLoggedIn) {
       showInfo('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng');
       localStorage.setItem('redirectAfterLogin', '/medicines');
@@ -61,9 +59,6 @@ const MedicineList = ({ medicines = [] }) => {
                 <p className="text-green-700 font-bold text-sm">{medicine.price ? medicine.price.toLocaleString() + " đ" : ""}</p>
               </div>
             </Link>
-            {/* <button className="mt-2 bg-green-700 hover:bg-green-800 text-white text-sm font-semibold py-1 rounded">
-              Mua ngay
-            </button> */}
             <button 
               className="mt-2 bg-green-700 hover:bg-green-800 text-white text-sm font-semibold py-1 rounded border border-green-700"
               onClick={(e) => handleAddToCart(medicine, e)}

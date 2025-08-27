@@ -5,9 +5,6 @@ const CartContext = createContext();
 
 export const useCart = () => {
   const context = useContext(CartContext);
-  if (!context) {
-    throw new Error('useCart must be used within a CartProvider');
-  }
   return context;
 };
 
@@ -54,7 +51,7 @@ export const CartProvider = ({ children }) => {
         setCartItems(backendItems);
       }
     } catch (error) {
-      console.error('Error syncing cart:', error);
+      // Sync failed, keep current state
     } finally {
       setIsSyncing(false);
     }
@@ -74,7 +71,6 @@ export const CartProvider = ({ children }) => {
         setIsLoading(true);
         await syncCartWithBackend();
       } catch (error) {
-        console.error('Error loading cart:', error);
         setCartItems([]);
       } finally {
         setIsLoading(false);
@@ -84,19 +80,16 @@ export const CartProvider = ({ children }) => {
     initCart();
   }, [syncCartWithBackend]);
 
-  // Auto-sync when user logs in
   useEffect(() => {
     let lastAuthState = !!(localStorage.getItem('token') || localStorage.getItem('userToken'));
     
     const checkAuthChange = () => {
       const currentAuthState = !!(localStorage.getItem('token') || localStorage.getItem('userToken'));
       
-      // If user just logged in
       if (!lastAuthState && currentAuthState && !isLoading && !isSyncing) {
         syncCartWithBackend();
       }
       
-      // If user logged out
       if (lastAuthState && !currentAuthState) {
         setCartItems([]);
       }
@@ -108,7 +101,6 @@ export const CartProvider = ({ children }) => {
     return () => clearInterval(interval);
   }, [isLoading, isSyncing, syncCartWithBackend]);
 
-  // Add item to cart
   const addToCart = useCallback(async (medicine, quantity = 1) => {
     if (!isUserLoggedIn()) {
       return { success: false, message: 'Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng' };
@@ -126,7 +118,6 @@ export const CartProvider = ({ children }) => {
         quantity: quantity
       });
 
-      // Update local state
       setCartItems(prevItems => {
         const existingItem = prevItems.find(item => item.id === medicine.id);
         
@@ -136,20 +127,20 @@ export const CartProvider = ({ children }) => {
           
           return prevItems.map(item =>
             item.id === medicine.id
-              ? { ...item, quantity: newQuantity, total_price: response.data?.total_price || ((item.price || 0) * newQuantity) }
+              ? { ...item, quantity: newQuantity, total_price: response.data?.total_price}
               : item
           );
         } else {
           const newItem = {
             id: medicine.id,
-            name: medicine.name || 'Sản phẩm không có tên',
-            price: medicine.price || 0,
+            name: medicine.name,
+            price: medicine.price,
             quantity: quantity,
-            total_price: response.data?.total_price || ((medicine.price || 0) * quantity),
+            total_price: response.data?.total_price,
             selected: true,
             image: medicine.images?.[0]?.imgMedicineUrl,
-            genre: medicine.medicineGenre?.name || "Không xác định",
-            produce: medicine.produce?.name || "Không xác định",
+            genre: medicine.medicineGenre?.name,
+            produce: medicine.produce?.name,
             cartItemId: response.data?.id
           };
           return [...prevItems, newItem];
@@ -164,7 +155,6 @@ export const CartProvider = ({ children }) => {
     }
   }, [isUserLoggedIn]);
 
-  // Update quantity
   const updateQuantity = useCallback(async (id, newQuantity) => {
     if (!isUserLoggedIn()) {
       return { success: false, message: 'Vui lòng đăng nhập để cập nhật giỏ hàng' };
@@ -176,20 +166,18 @@ export const CartProvider = ({ children }) => {
     }
 
     try {
-      // Update UI optimistically first
       if (newQuantity <= 0) {
         setCartItems(prevItems => prevItems.filter(item => item.id !== id));
       } else if (newQuantity <= 99) {
         setCartItems(prevItems =>
           prevItems.map(item =>
-            item.id === id ? { ...item, quantity: newQuantity, total_price: (item.price || 0) * newQuantity } : item
+            item.id === id ? { ...item, quantity: newQuantity, total_price: (item.price) * newQuantity } : item
           )
         );
       } else {
         return { success: false, message: 'Số lượng tối đa là 99' };
       }
 
-      // Then sync with backend
       setIsSyncing(true);
       const api = createAuthenticatedAxios();
       
@@ -203,7 +191,6 @@ export const CartProvider = ({ children }) => {
 
       return { success: true };
     } catch (error) {
-      // Revert optimistic update on error
       await syncCartWithBackend();
       return { success: false, message: 'Lỗi khi cập nhật số lượng' };
     } finally {
@@ -257,7 +244,7 @@ export const CartProvider = ({ children }) => {
       return { success: true, message: 'Đã xóa toàn bộ giỏ hàng' };
     } catch (error) {
       setCartItems([]);
-      return { success: true, message: 'Đã xóa toàn bộ giỏ hàng (có lỗi đồng bộ)' };
+      return { success: true, message: 'Đã xóa toàn bộ giỏ hàng' };
     } finally {
       setIsSyncing(false);
     }
@@ -315,7 +302,6 @@ export const CartProvider = ({ children }) => {
     return item ? item.quantity : 0;
   }, [cartItems]);
 
-  // Buy now - temporary cart for direct purchase
   const buyNow = useCallback((medicine, quantity = 1) => {
     if (!isUserLoggedIn()) {
       return { success: false, message: 'Vui lòng đăng nhập để mua hàng' };
@@ -325,7 +311,6 @@ export const CartProvider = ({ children }) => {
       return { success: false, message: 'Dữ liệu sản phẩm không hợp lệ' };
     }
 
-    // Store buy now item in localStorage for checkout page
     const buyNowItem = {
       id: medicine.id,
       name: medicine.name || 'Sản phẩm không có tên',
@@ -343,7 +328,6 @@ export const CartProvider = ({ children }) => {
     return { success: true, message: 'Chuyển đến trang thanh toán' };
   }, [isUserLoggedIn]);
 
-  // Reorder - buy again from order items  
   const reorderItems = useCallback((orderItems) => {
     if (!isUserLoggedIn()) {
       return { success: false, message: 'Vui lòng đăng nhập để mua lại' };
@@ -353,7 +337,6 @@ export const CartProvider = ({ children }) => {
       return { success: false, message: 'Không có sản phẩm để mua lại' };
     }
 
-    // Convert order items to buy now format
     const reorderItemsFormatted = orderItems.map(item => ({
       id: item.medicine || item.medicine_id || item.id,
       name: item.medicine_name || item.name || 'Sản phẩm không có tên',
@@ -372,12 +355,9 @@ export const CartProvider = ({ children }) => {
   }, [isUserLoggedIn]);
 
   const value = {
-    // State
     cartItems,
     isLoading,
     isSyncing,
-    
-    // Actions
     addToCart,
     buyNow,
     reorderItems,
@@ -385,14 +365,10 @@ export const CartProvider = ({ children }) => {
     removeFromCart,
     clearCart,
     syncCartWithBackend,
-    
-    // Getters
     getTotalItems,
     getTotalAmount,
     isInCart,
     getItemQuantity,
-    
-    // Selection functions
     getSelectedAmount,
     getSelectedItems,
     toggleItemSelection,
