@@ -51,12 +51,12 @@ const CheckoutSummary = ({
             <span>Phí vận chuyển</span>
             <span
               className={
-                deliveryType === "delivery"
+                deliveryType === "home_delivery"
                   ? "text-orange-600"
                   : "text-green-700"
               }
             >
-              {deliveryType === "delivery"
+              {deliveryType === "home_delivery"
                 ? `${shippingFee.toLocaleString()} đ`
                 : "Miễn phí"}
             </span>
@@ -70,7 +70,7 @@ const CheckoutSummary = ({
           <span className="text-green-700">
             {(
               totalAmount +
-              (deliveryType === "delivery" ? shippingFee : 0)
+              (deliveryType === "home_delivery" ? shippingFee : 0)
             ).toLocaleString()}{" "}
             đ
           </span>

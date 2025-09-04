@@ -1,10 +1,29 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useRegister } from "../hooks/useRegister";
 import RegisterForm from "../features/Auth/RegisterForm";
 import AuthImagePanel from "../features/Auth/AuthImagePanel";
+import LoadingSpinner from "../ui/LoadingSpinner";
 
 const Register = () => {
+  const [pageLoading, setPageLoading] = useState(true);
   const { formData, isLoading, handleInputChange, handleSubmit } = useRegister();
+
+  useEffect(() => {
+    // Simulate page loading time
+    const timer = setTimeout(() => {
+      setPageLoading(false);
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (pageLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-green-700">
+        <LoadingSpinner message="" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-green-700">

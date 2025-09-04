@@ -6,6 +6,7 @@ class RoleEnum(models.TextChoices):
     ADMIN = "admin", "Admin"
     STAFF = "employee", "Employee"
     CUSTOMER = "customer", "Customer"
+    CUS_OFF = "cus_off", "Customer_offline"
 
 class StatusEnum(models.TextChoices):
     CHO_XAC_NHAN = "pending", "Chờ xác nhận"
@@ -41,11 +42,10 @@ class User(AbstractUser):
     email = models.EmailField(unique=True, null=True, blank=True)
     phone_number = models.CharField(max_length=15, blank=True, null=True)
     is_active = models.BooleanField(default=True)
-    is_staff = models.BooleanField(default=False)  # Cho phép truy cập admin
-    is_superuser = models.BooleanField(default=False)  # Super quyền
+    is_staff = models.BooleanField(default=False)  
+    is_superuser = models.BooleanField(default=False) 
     createdAt = models.DateTimeField(auto_now_add=True, null=True)
     userRole = models.CharField(max_length=20, choices=RoleEnum.choices,default=RoleEnum.CUSTOMER)
-    fcm_token = models.TextField(blank=True, null=True)  # FCM token for push notifications
 
     def __str__(self):
         return self.username
@@ -62,6 +62,7 @@ class Produce(BaseModel):
         return self.name
 
 class Medicine(BaseModel):
+    quantity = models.IntegerField(default=0)
     description = models.TextField(null=True, blank=True)
     ingredient = models.TextField(null=True, blank=True)
     price = models.FloatField()
@@ -147,19 +148,6 @@ class OnlineOrderShip(models.Model):
 
     def __str__(self):
         return f"ShipInfo for OnlineOrder {self.online_order.id}"
-
-class ChatHistory(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="chat_history", null=True, blank=True)
-    user_message = models.TextField()
-    bot_response = models.TextField()
-    session_id = models.CharField(max_length=100, null=True, blank=True)  # Cho anonymous users
-    created_at = models.DateTimeField(auto_now_add=True)
-    
-    class Meta:
-        ordering = ['-created_at']
-        
-    def __str__(self):
-        return f"Chat {self.id} - {self.created_at}"
 
 
 

@@ -51,9 +51,15 @@ export const useLogin = () => {
       const userRole = userData.userRole || userData.role || userData.user_role;
       
       if (userRole === "staff") {
-        navigate('/staff/dashboard');
+        navigate('/staff/orders');
       } else {
-        navigate('/');
+        const redirectPath = localStorage.getItem('redirectAfterLogin');
+        if (redirectPath) {
+          localStorage.removeItem('redirectAfterLogin');
+          navigate(redirectPath);
+        } else {
+          navigate('/');
+        }
       }
       
     } catch (error) {

@@ -6,8 +6,15 @@ export const useOrderDetail = (orderId) => {
   const [isLoading, setIsLoading] = useState(true);
   const [shippingFees, setShippingFees] = useState([]);
 
-  const getShippingFee = () => 
-    order?.online_order?.shipping_method === 'store_pickup' ? 0 : shippingFees[0]?.price || 0;
+  const getShippingFee = () => {
+    // Đơn hàng bán trực tiếp (store_pickup) hoặc không có phí ship thì trả về 0
+    if (order?.online_order?.shipping_method === 'store_pickup' || 
+        order?.shipping_fee === null || 
+        order?.shipping_fee === 0) {
+      return 0;
+    }
+    return shippingFees[0]?.price;
+  };
 
   useEffect(() => {
     const fetchOrderDetail = async () => {

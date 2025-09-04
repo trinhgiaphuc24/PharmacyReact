@@ -54,12 +54,18 @@ const OrderItemsList = ({ items = [], getShippingFee, orderTotal }) => {
             <span>Tạm tính:</span>
             <span>{formatCurrency((orderTotal || 0) - getShippingFee())}</span>
           </div>
-          <div className="flex justify-between text-gray-600">
-            <span>Phí vận chuyển:</span>
-            <span className={getShippingFee() > 0 ? "text-orange-600" : "text-green-700"}>
-              {getShippingFee() > 0 ? `${getShippingFee().toLocaleString()} đ` : 'Miễn phí'}
-            </span>
-          </div>
+          {getShippingFee() > 0 && (
+            <div className="flex justify-between text-gray-600">
+              <span>Phí vận chuyển:</span>
+              <span className="text-orange-600">{getShippingFee().toLocaleString()} đ</span>
+            </div>
+          )}
+          {getShippingFee() === 0 && (
+            <div className="flex justify-between text-gray-600">
+              <span>Phí vận chuyển:</span>
+              <span className="text-green-700">Miễn phí</span>
+            </div>
+          )}
           <div className="flex justify-between text-xl font-bold text-gray-800 border-t pt-3">
             <span>Tổng cộng:</span>
             <span className="text-green-600">{formatCurrency(orderTotal || 0)}</span>

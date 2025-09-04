@@ -1,40 +1,31 @@
-import React, { useEffect } from "react";
+import React from "react";
 import Header from "../ui/Header";
 import Footer from "../ui/Footer";
 import OrderFilters from "../features/StaffOrder/OrderFilters";
 import OrderTable from "../features/StaffOrder/OrderTable";
 import Pagination from "../ui/Pagination";
 import { useNavigate } from "react-router-dom";
-import { useOrders, useOrderFilters } from "../hooks/useOrders";
+import { useOrders } from "../hooks/useOrders";
 import { formatCurrency, formatDate } from "../utils/helper";
 
 const StaffDashboard = () => {
   const navigate = useNavigate();
 
-  const { orders, loading, error, currentPage, totalPages, fetchOrders } = useOrders();
-
-  const {
+  const { 
+    orders, 
+    loading, 
+    error, 
+    currentPage, 
+    totalPages, 
     searchQuery,
     setSearchQuery,
     statusFilter,
     setStatusFilter,
     dateFilter,
     setDateFilter,
-    buildFilters,
-  } = useOrderFilters();
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const filters = buildFilters();
-      fetchOrders(1, filters);
-    }, 100);
-    return () => clearTimeout(timer);
-  }, [searchQuery, statusFilter, dateFilter, buildFilters, fetchOrders]);
-
-  const handlePageChange = (page) => {
-    const filters = buildFilters();
-    fetchOrders(page, filters);
-  };
+    fetchOrders,
+    handlePageChange
+  } = useOrders();
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -72,11 +63,11 @@ const StaffDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+      <Header searchQuery="" setSearchQuery={() => {}} />
 
       <div className="container mx-auto px-4 py-8">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">
+        <div >
+          <h1 className="text-3xl font-bold text-gray-800 mb-8">
             Quản lý đơn hàng
           </h1>
         </div>
@@ -96,8 +87,7 @@ const StaffDashboard = () => {
           error={error}
           onViewOrder={(orderId) => navigate(`/staff/orders/${orderId}`)}
           onRetry={() => {
-            const filters = buildFilters();
-            fetchOrders(1, filters);
+            fetchOrders();
           }}
           formatCurrency={formatCurrency}
           formatDate={formatDate}

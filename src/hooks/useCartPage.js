@@ -20,7 +20,7 @@ export const useCartPage = () => {
     selectAllItems,
     isAllSelected
   } = useCartContext();
-  const { showSuccess, showInfo } = useToast();
+  const { showSuccess, showInfo, showError } = useToast();
 
   const isLoggedIn = !!user;
 
@@ -41,7 +41,7 @@ export const useCartPage = () => {
   const handleUpdateQuantity = async (id, newQuantity) => {
     const result = await updateQuantity(id, newQuantity);
     if (!result.success && result.message) {
-      showInfo(result.message);
+      showError(result.message);
     }
   };
 

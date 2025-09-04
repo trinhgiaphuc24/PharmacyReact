@@ -74,14 +74,14 @@ const StaffOrderDetailPage = () => {
         {/* Header */}
         <div className="flex items-center gap-4 mb-6">
           <button
-            onClick={() => navigate('/staff/dashboard')}
+            onClick={() => navigate('/staff/orders')}
             className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
             Quay lại
           </button>
           <div>
-            <h1 className="text-3xl font-bold text-gray-800">Chi tiết đơn hàng #{order.id}</h1>
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">Chi tiết đơn hàng #{order.id}</h1>
             <p className="text-gray-600">Ngày đặt: {formatDateTime(order.createdAt)}</p>
           </div>
         </div>

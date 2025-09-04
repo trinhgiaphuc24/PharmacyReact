@@ -15,24 +15,18 @@ export const NotificationProvider = ({ children }) => {
   const { user, isAuthenticated } = useAuth();
   const processedIds = useRef(new Set());
 
-  // Load notifications từ localStorage khi component mount
   useEffect(() => {
     if (user?.id) {
       const savedNotifications = localStorage.getItem(`notifications_${user.id}`);
       const savedUnreadCount = localStorage.getItem(`unreadCount_${user.id}`);
       
       if (savedNotifications) {
-        try {
-          const parsed = JSON.parse(savedNotifications);
-          // Convert timestamp strings back to Date objects
-          const notificationsWithDates = parsed.map(notif => ({
-            ...notif,
-            timestamp: new Date(notif.timestamp)
-          }));
-          setNotifications(notificationsWithDates);
-        } catch (error) {
-          console.error('Error parsing saved notifications:', error);
-        }
+        const parsed = JSON.parse(savedNotifications);
+        const notificationsWithDates = parsed.map(notif => ({
+          ...notif,
+          timestamp: new Date(notif.timestamp)
+        }));
+        setNotifications(notificationsWithDates);
       }
       
       if (savedUnreadCount) {
@@ -51,7 +45,6 @@ export const NotificationProvider = ({ children }) => {
   }, [user?.id, notifications, unreadCount]);
 
   const addNotification = useCallback((notification) => {
-    console.log('🔔 addNotification called:', notification);
     setNotifications(prev => {
       // Kiểm tra duplicate với notifications hiện tại
       const isDuplicate = prev.some(existing => 
@@ -60,7 +53,6 @@ export const NotificationProvider = ({ children }) => {
       );
       
       if (isDuplicate) {
-        console.log('🚫 Duplicate detected in addNotification');
         return prev;
       }
       
@@ -71,30 +63,17 @@ export const NotificationProvider = ({ children }) => {
         ...notification
       };
       
-      console.log('✅ Adding new notification, incrementing unreadCount');
       setUnreadCount(prevCount => prevCount + 1);
       return [newNotification, ...prev];
     });
   }, []);
 
   const handleWebSocketMessage = useCallback((data) => {
-    console.log('🔌 WebSocket message received:', data);
     const { type, order_id, title, message, timestamp } = data;
-    
-    // CHỈ XỬ LÝ CÁC LOẠI NOTIFICATION CHO CUSTOMER
-    const allowedCustomerTypes = ['order_created', 'order_status_update'];
-    
-    if (!allowedCustomerTypes.includes(type)) {
-      console.log('🚫 Skipping non-customer notification type:', type);
-      return;
-    }
-    
-    // Tạo unique key cho message này bao gồm cả timestamp
     const messageKey = `${type}_${order_id}_${timestamp}`;
     
     // Kiểm tra nếu đã xử lý message này rồi
     if (processedIds.current.has(messageKey)) {
-      console.log('🚫 Message already processed:', messageKey);
       return;
     }
     
@@ -102,9 +81,9 @@ export const NotificationProvider = ({ children }) => {
     processedIds.current.add(messageKey);
     
     // Xóa sau 30 giây để tránh memory leak (tăng thời gian để chắc chắn)
-    setTimeout(() => {
-      processedIds.current.delete(messageKey);
-    }, 30000);
+    // setTimeout(() => {
+    //   processedIds.current.delete(messageKey);
+    // }, 30000);
     
     // SỬ DỤNG FUNCTIONAL UPDATE VỚI IMMEDIATE RETURN ĐỂ TRÁNH DUPLICATE
     setNotifications(prev => {
@@ -116,7 +95,6 @@ export const NotificationProvider = ({ children }) => {
       );
       
       if (isDuplicate) {
-        console.log('🚫 Duplicate detected in WebSocket (with timestamp)');
         return prev; // RETURN NGAY LẬP TỨC
       }
       
@@ -138,11 +116,8 @@ export const NotificationProvider = ({ children }) => {
         data: { ...notificationData, ...data.data }
       };
       
-      console.log('✅ Adding WebSocket notification, incrementing unreadCount');
-      
       // CHỈ TĂNG UNREAD COUNT KHI THỰC SỰ THÊM NOTIFICATION MỚI
       setUnreadCount(prevCount => {
-        console.log('📊 UnreadCount increment:', prevCount, '->', prevCount + 1);
         return prevCount + 1;
       });
       
@@ -164,16 +139,11 @@ export const NotificationProvider = ({ children }) => {
       if (isConnecting) return;
       isConnecting = true;
       
-      try {
-        await webSocketService.connect(user.id);
-        // Xóa listener cũ trước khi thêm mới
-        webSocketService.off('all', handleWebSocketMessage);
-        webSocketService.on('all', handleWebSocketMessage);
-      } catch (error) {
-        console.error('WebSocket connection failed:', error);
-      } finally {
-        isConnecting = false;
-      }
+      await webSocketService.connect(user.id);
+      // Xóa listener cũ trước khi thêm mới
+      webSocketService.off('all', handleWebSocketMessage);
+      webSocketService.on('all', handleWebSocketMessage);
+      isConnecting = false;
     };
 
     connectWebSocket();

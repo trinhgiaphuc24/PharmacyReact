@@ -73,7 +73,7 @@ const Checkout = () => {
                 onDeliveryTypeChange={setDeliveryType}
               />
 
-              {deliveryType === "delivery" && (
+              {deliveryType === "home_delivery" && (
                 <ShippingAddressForm
                   shippingInfo={shippingInfo}
                   provinces={provinces}

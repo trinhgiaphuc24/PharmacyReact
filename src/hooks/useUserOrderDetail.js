@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { orderService } from '../services/orderService';
+import pdfExportService from '../services/pdfExportService';
 
 export const useUserOrderDetail = (orderId) => {
   const [order, setOrder] = useState(null);
@@ -12,7 +13,7 @@ export const useUserOrderDetail = (orderId) => {
   const [shippingFees, setShippingFees] = useState([]);
   
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { user } = useAuth(); // Sử dụng user thay vì isAuthenticated
   const { showError, showSuccess } = useToast();
 
   const getShippingFee = () => {
@@ -23,7 +24,9 @@ export const useUserOrderDetail = (orderId) => {
   };
 
   const loadOrderDetail = useCallback(async () => {
-    if (!isAuthenticated()) {
+    if (!user) {
+      // Set redirect path và chuyển về login
+      localStorage.setItem('redirectAfterLogin', `/orders/${orderId}`);
       navigate('/login');
       return;
     }
@@ -48,7 +51,7 @@ export const useUserOrderDetail = (orderId) => {
     } finally {
       setIsLoading(false);
     }
-  }, [orderId, isAuthenticated, navigate, showError]);
+  }, [orderId, user, navigate, showError]);
 
   const handleCancelOrder = async () => {
     if (!window.confirm('Bạn có chắc chắn muốn hủy đơn hàng này?')) {
@@ -74,11 +77,14 @@ export const useUserOrderDetail = (orderId) => {
   };
 
   const handleExportPDF = async () => {
-    if (!orderId) return;
+    if (!order) {
+      showError('Không có thông tin đơn hàng để xuất PDF');
+      return;
+    }
     
     setIsExporting(true);
     try {
-      const result = await orderService.exportOrderPDF(orderId);
+      const result = await pdfExportService.exportOrderPDF(order);
       if (result.success) {
         showSuccess(result.message || 'Đã tải xuống hóa đơn PDF');
       } else {
@@ -93,10 +99,10 @@ export const useUserOrderDetail = (orderId) => {
   };
 
   useEffect(() => {
-    if (orderId) {
+    if (orderId && user) {
       loadOrderDetail();
     }
-  }, [orderId, loadOrderDetail]);
+  }, [orderId, user, loadOrderDetail]);
 
   return {
     order,

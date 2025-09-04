@@ -6,6 +6,7 @@ import {
   Menu,
   ChevronDown,
   Package,
+  Banknote,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
@@ -135,30 +136,45 @@ const Header = ({searchQuery,setSearchQuery,onSearchSubmit,}) => {
           )}
 
           {userIsStaff && (
-            <div
-              className="w-6 h-6 text-white cursor-pointer"
-              onClick={() => navigate("/staff/dashboard")}
-              title="Quản lý đơn hàng"
-            >
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+            <>
+              <div
+                className="w-6 h-6 text-white cursor-pointer"
+                onClick={() => navigate("/staff/orders")}
+                title="Quản lý đơn hàng"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                />
-              </svg>
-            </div>
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                  />
+                </svg>
+              </div>
+              <Banknote
+                className="w-6 h-6 text-white cursor-pointer"
+                onClick={() => navigate("/staff/sales")}
+                title="Bán hàng trực tiếp"
+              />
+              <Package
+                className="w-6 h-6 text-white cursor-pointer"
+                onClick={() => navigate("/staff/inventory")}
+                title="Quản lý tồn kho"
+              />
+            </>
           )}
 
           {isLoggedIn ? (
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 bg-white bg-opacity-10 px-4 py-2 rounded-full">
+              <div 
+                className="flex items-center gap-2 bg-white bg-opacity-10 px-4 py-2 rounded-full cursor-pointer hover:bg-opacity-20 transition-colors"
+                onClick={() => navigate("/profile")}
+              >
                 <div className="w-8 h-8 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
                   <span className="text-white font-semibold text-sm">
                     {user?.last_name?.charAt(0).toUpperCase()}
@@ -190,6 +206,7 @@ const Header = ({searchQuery,setSearchQuery,onSearchSubmit,}) => {
         </div>
       </div>
 
+      {!userIsStaff && (
       <div className="max-w-5xl mx-auto px-5 flex items-center text-sm font-medium">
         {showMedicineGenreMenu && (
           <div className="fixed inset-0 bg-black bg-opacity-30 z-40"></div>
@@ -258,6 +275,7 @@ const Header = ({searchQuery,setSearchQuery,onSearchSubmit,}) => {
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 };

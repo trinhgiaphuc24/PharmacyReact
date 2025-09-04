@@ -3,7 +3,7 @@ import Header from "../ui/Header";
 import Footer from "../ui/Footer";
 import MedicineList from "../features/Medicine/MedicineList";
 import Base from "../ui/Base";
-import Spinner from "../ui/Spinner";
+import LoadingSpinner from "../ui/LoadingSpinner";
 import MedicineGenre from "../features/MedicineGenre/MedicineGenre";
 import FilterPanel from "../ui/FilterPanel";
 import Pagination from "../ui/Pagination";
@@ -38,7 +38,7 @@ const Medicine = () => {
   if (loading && medicines.length === 0) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <Spinner />
+        <LoadingSpinner message="Đang tải danh sách thuốc..." />
       </div>
     );
   }

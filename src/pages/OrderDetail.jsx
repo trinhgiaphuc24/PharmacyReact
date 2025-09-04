@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import Header from "../ui/Header";
 import Footer from "../ui/Footer";
 import Base from "../ui/Base";
-import Spinner from "../ui/Spinner";
+import LoadingSpinner from "../ui/LoadingSpinner";
 import Breadcrumb from "../ui/Breadcrumb";
 import OrderDetailHeader from "../features/OrderDetail/OrderDetailHeader";
 import OrderItems from "../features/OrderDetail/OrderItems";
@@ -14,6 +15,13 @@ import { useUserOrderDetail } from "../hooks/useUserOrderDetail";
 const OrderDetail = () => {
   const { orderId } = useParams();
   const [searchQuery, setSearchQuery] = useState("");
+  const { user } = useAuth();
+  
+  useEffect(() => {
+    if (!user) {
+      localStorage.setItem('redirectAfterLogin', `/orders/${orderId}`);
+    }
+  }, [user, orderId]);
   
   const { 
     order, 
@@ -30,7 +38,7 @@ const OrderDetail = () => {
       <div className="min-h-screen bg-gray-50">
         <Header />
         <div className="flex justify-center items-center py-16">
-          <Spinner />
+          <LoadingSpinner message="Đang tải chi tiết đơn hàng..." />
         </div>
         <Footer />
         <Base />

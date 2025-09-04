@@ -16,7 +16,7 @@ import MedicineDetailTabs from "../features/MedicineDetail/MedicineDetailTabs";
 const MedicineDetail = () => {
   const navigate = useNavigate();
   const { addToCart, buyNow } = useCart();
-  const { showSuccess } = useToast();
+  const { showSuccess, showError } = useToast();
   const {
     medicine,
     loading,
@@ -34,6 +34,8 @@ const MedicineDetail = () => {
       const result = await addToCart(medicine, quantity);
       if (result.success) {
         showSuccess(`Đã thêm ${quantity} ${medicine.name} vào giỏ hàng!`);
+      } else {
+        showError(result.message);
       }
     }
   };
@@ -43,7 +45,9 @@ const MedicineDetail = () => {
       const result = buyNow(medicine, quantity);
       if (result.success) {
         navigate('/checkout');
-      } 
+      } else {
+        showError(result.message);
+      }
     }
   };
 
@@ -71,6 +75,8 @@ const MedicineDetail = () => {
               quantity={quantity}
               onIncrement={incrementQuantity}
               onDecrement={decrementQuantity}
+              maxQuantity={medicine?.quantity}
+              showStock={true}
             />
             <ActionButtons 
               onAddToCart={handleAddToCart}

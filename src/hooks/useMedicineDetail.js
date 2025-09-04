@@ -19,7 +19,11 @@ export const useMedicineDetail = () => {
   }, [id]);
 
   const handleQuantityChange = (delta) => {
-    setQuantity(q => Math.max(1, q + delta));
+    setQuantity(q => {
+      const newQuantity = q + delta;
+      const maxQuantity = medicine?.quantity || 1;
+      return Math.max(1, Math.min(newQuantity, maxQuantity));
+    });
   };
 
   const incrementQuantity = () => handleQuantityChange(1);

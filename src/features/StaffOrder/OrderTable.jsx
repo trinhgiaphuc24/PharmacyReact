@@ -12,7 +12,7 @@ const OrderTable = ({
   getStatusColor,
   getStatusText
 }) => {
-  if (loading) {
+  if (loading && orders.length === 0) {
     return (
       <div className="bg-white rounded-lg shadow-sm border p-12">
         <div className="text-center">

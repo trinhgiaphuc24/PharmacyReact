@@ -7,6 +7,7 @@ export const endpoints = {
     'current-user': '/users/current-user/',
     'register': '/users/',
     'medicines': '/medicines',
+    'best-selling-medicines': '/medicines/best-selling/',
     'medicine-genres': '/medicine-genres',
     'produces': '/produces',
     'chatbot': '/chatbot/',

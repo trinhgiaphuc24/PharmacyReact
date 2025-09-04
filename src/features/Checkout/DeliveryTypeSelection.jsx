@@ -11,7 +11,7 @@ const DeliveryTypeSelection = ({ deliveryType, onDeliveryTypeChange }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <label
           className={`flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition ${
-            deliveryType === "pickup"
+            deliveryType === "store_pickup"
               ? "border-green-500 bg-green-50"
               : "border-gray-200 hover:border-gray-300"
           }`}
@@ -19,8 +19,8 @@ const DeliveryTypeSelection = ({ deliveryType, onDeliveryTypeChange }) => {
           <input
             type="radio"
             name="deliveryType"
-            value="pickup"
-            checked={deliveryType === "pickup"}
+            value="store_pickup"
+            checked={deliveryType === "store_pickup"}
             onChange={(e) => onDeliveryTypeChange(e.target.value)}
             className="w-4 h-4 text-green-700 border-gray-300 focus:ring-green-500"
           />
@@ -37,7 +37,7 @@ const DeliveryTypeSelection = ({ deliveryType, onDeliveryTypeChange }) => {
 
         <label
           className={`flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition ${
-            deliveryType === "delivery"
+            deliveryType === "home_delivery"
               ? "border-green-500 bg-green-50"
               : "border-gray-200 hover:border-gray-300"
           }`}
@@ -45,8 +45,8 @@ const DeliveryTypeSelection = ({ deliveryType, onDeliveryTypeChange }) => {
           <input
             type="radio"
             name="deliveryType"
-            value="delivery"
-            checked={deliveryType === "delivery"}
+            value="home_delivery"
+            checked={deliveryType === "home_delivery"}
             onChange={(e) => onDeliveryTypeChange(e.target.value)}
             className="w-4 h-4 text-green-700 border-gray-300 focus:ring-green-500"
           />

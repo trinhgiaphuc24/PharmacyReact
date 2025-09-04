@@ -15,7 +15,7 @@ import { XCircle } from "lucide-react";
 import OrderList from "../features/Order/OrderList";
 
 const Orders = () => {
-  const { isAuthenticated } = useAuth();
+  const { user } = useAuth(); // Sử dụng user thay vì isAuthenticated
   const { showError, showSuccess } = useToast();
   
   const {
@@ -31,6 +31,7 @@ const Orders = () => {
     dateFilter,
     setDateFilter,
     fetchOrders,
+    handlePageChange,
     cancelOrder
   } = useUserOrders();
 
@@ -42,18 +43,12 @@ const Orders = () => {
     { value: "canceled", label: "Đã hủy" }
   ];
 
+  // Set redirect path để sau khi login sẽ quay về trang orders
   useEffect(() => {
-    if (isAuthenticated()) {
-      fetchOrders(1);
+    if (!user) {
+      localStorage.setItem('redirectAfterLogin', '/orders');
     }
-  }, [fetchOrders, isAuthenticated]);
-
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    if (isAuthenticated()) {
-      fetchOrders(1);
-    }
-  }, [statusFilter, searchQuery, dateFilter, fetchOrders, isAuthenticated]);
+  }, [user]);
 
   const handleCancelOrder = async (orderId) => {
     try {
@@ -64,7 +59,7 @@ const Orders = () => {
     }
   };
 
-  if (!isAuthenticated()) {
+  if (!user) {
     return (
       <UnauthenticatedView 
         icon={FaClipboardList}
@@ -76,7 +71,7 @@ const Orders = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans">
-      <Header searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+      <Header searchQuery="" setSearchQuery={() => {}} />
       
       <div className="py-8 px-4">
         <div className="max-w-6xl mx-auto">
@@ -98,9 +93,9 @@ const Orders = () => {
           />
 
           {/* Content */}
-          {isLoading ? (
+          {isLoading && orders.length === 0 ? (
             <div className="flex justify-center py-16">
-              <LoadingSpinner />
+              <LoadingSpinner message="Đang tải danh sách đơn hàng..." />
             </div>
           ) : error ? (
             <div className="bg-white rounded-lg shadow-sm border p-12">
@@ -121,7 +116,7 @@ const Orders = () => {
               <Pagination 
                 currentPage={currentPage} 
                 totalPages={totalPages} 
-                onPageChange={fetchOrders}
+                onPageChange={handlePageChange}
                 loading={isLoading}
               />
             </>

@@ -1,32 +1,22 @@
-import { createContext, useContext, useEffect, useReducer } from "react";
+import { createContext, useContext, useReducer, useEffect } from "react";
 import { Navigate } from "react-router-dom";
+import LoadingSpinner from "../ui/LoadingSpinner";
 import api, { endpoints } from "../utils/axiosConfig";
 
-// Auth Reducer
+
 const authReducer = (current, action) => {
     switch (action.type) {
-        case "SET_LOADING":
-            return { ...current, isLoading: action.payload };
-            
         case "login":
             if (action.payload) {
                 localStorage.setItem('user', JSON.stringify(action.payload));
                 localStorage.setItem('token', action.payload.token);
             }
-            return { ...current, user: action.payload, isLoading: false };
+            return { ...current, user: action.payload };
             
         case "logout":
             localStorage.removeItem('token');
             localStorage.removeItem('user');
-            return { ...current, user: null, isLoading: false };
-            
-        case "update_user":
-            const updatedUser = { ...current.user, ...action.payload };
-            if (updatedUser.token) {
-                localStorage.setItem('token', updatedUser.token);
-            }
-            localStorage.setItem('user', JSON.stringify(updatedUser));
-            return { ...current, user: updatedUser };
+            return { ...current, user: null };
             
         default:
             return current;
@@ -37,33 +27,29 @@ const AuthContext = createContext();
 
 function AuthProvider({ children }) {
     const [state, dispatch] = useReducer(authReducer, {
-        user: null,
-        isLoading: true
+        user: null
     });
 
+    // Load user from localStorage on initial mount
     useEffect(() => {
-        const initAuth = async () => {
+        const storedUser = localStorage.getItem('user');
+        const storedToken = localStorage.getItem('token');
+        
+        if (storedUser && storedToken) {
             try {
-                const storedUser = localStorage.getItem('user');
-                const storedToken = localStorage.getItem('token');
-                
-                if (storedUser && storedToken) {
-                    const userData = JSON.parse(storedUser);
+                const userData = JSON.parse(storedUser);
+                if (userData && userData.token) {
                     dispatch({
-                        type: "login",
-                        payload: { ...userData, token: storedToken }
+                        type: 'login',
+                        payload: userData
                     });
-                } else {
-                    dispatch({ type: "SET_LOADING", payload: false });
                 }
             } catch (error) {
+                // If parsing fails, clear localStorage
                 localStorage.removeItem('user');
                 localStorage.removeItem('token');
-                dispatch({ type: "SET_LOADING", payload: false });
             }
-        };
-
-        initAuth();
+        }
     }, []);
 
     const login = (userData) => {
@@ -81,8 +67,8 @@ function AuthProvider({ children }) {
 
     const updateUser = (userData) => {
         dispatch({
-            type: 'update_user',
-            payload: userData
+            type: 'login', // Reuse login để update user + localStorage
+            payload: { ...state.user, ...userData }
         });
     };
 
@@ -185,31 +171,8 @@ function AuthProvider({ children }) {
         }
     };
 
-    const getCurrentUser = async () => {
-        try {
-            const token = getAccessToken() ;
-            if (!token) return null;
-
-            const response = await api.get(endpoints['current-user'], {
-                headers: { 
-                    'Authorization': `Bearer ${token}`,
-                }
-            });
-            
-            const userData = response.data;
-            const userWithToken = { ...userData, token};
-            updateUser(userWithToken);
-            return userWithToken;
-            
-        } catch (error) {
-            logout();
-            return null;
-        }
-    };
-
     const contextValue = {
         user: state.user,
-        isLoading: state.isLoading,
         login,
         logout,
         updateUser,
@@ -218,8 +181,7 @@ function AuthProvider({ children }) {
         isCustomer,
         getAccessToken,
         defaultUserLogin,
-        defaultUserRegister,
-        getCurrentUser
+        defaultUserRegister
     };
 
     return (
@@ -235,7 +197,16 @@ function useAuth() {
 }
 
 const ProtectedStaffRoute = ({ children }) => {
-    const { isAuthenticated, isStaff } = useAuth();
+    const { isAuthenticated, isStaff, user } = useAuth();
+    
+    const token = localStorage.getItem('token');
+    if (token && !user) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <LoadingSpinner message="Đang kiểm tra quyền truy cập..." />
+            </div>
+        );
+    }
     
     if (!isAuthenticated() || !isStaff()) {
         return <Navigate to="/login" replace />;

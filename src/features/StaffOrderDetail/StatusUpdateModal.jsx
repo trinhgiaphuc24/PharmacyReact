@@ -13,13 +13,13 @@ const StatusUpdateModal = ({ isOpen, onClose, orderId, currentStatus, onStatusCh
   };
 
   const getAllowedStatuses = (current) => {
-    const currentOrder = statusConfig[current]?.order || 0;
+    // const currentOrder = statusConfig[current]?.order || 0;
     
     switch (current) {
       case 'pending':
         return ['waiting_for_pickup', 'canceled'];
       case 'waiting_for_pickup':
-        return ['waiting_for_delivery', 'canceled'];
+        return ['waiting_for_delivery', 'canceled', 'delivered'];
       case 'waiting_for_delivery':
         return ['delivered', 'canceled'];
       case 'delivered':

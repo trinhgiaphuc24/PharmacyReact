@@ -17,8 +17,11 @@ import PaymentResult from "./pages/PaymentResult";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import MedicineDetail from "./pages/MedicineDetail";
+import UserProfile from "./pages/UserProfile";
 import StaffDashboard from "./pages/StaffOrder";
 import StaffOrderDetailPage from "./pages/StaffOrderDetails";
+import StaffSales from "./pages/StaffSales";
+import StaffInventory from "./pages/StaffInventory";
 
 const AppContent = () => {
   return (
@@ -35,11 +38,12 @@ const AppContent = () => {
       <Route path="/payment/error" element={<PaymentResult />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/profile" element={<UserProfile />} />
       <Route path="/medicines/:id" element={<MedicineDetail />} />
       
       {/* Protected Staff Routes */}
       <Route 
-        path="/staff/dashboard" 
+        path="/staff/orders" 
         element={
           <ProtectedStaffRoute>
             <StaffDashboard />
@@ -51,6 +55,22 @@ const AppContent = () => {
         element={
           <ProtectedStaffRoute>
             <StaffOrderDetailPage />
+          </ProtectedStaffRoute>
+        } 
+      />
+      <Route 
+        path="/staff/sales" 
+        element={
+          <ProtectedStaffRoute>
+            <StaffSales />
+          </ProtectedStaffRoute>
+        } 
+      />
+      <Route 
+        path="/staff/inventory" 
+        element={
+          <ProtectedStaffRoute>
+            <StaffInventory />
           </ProtectedStaffRoute>
         } 
       />

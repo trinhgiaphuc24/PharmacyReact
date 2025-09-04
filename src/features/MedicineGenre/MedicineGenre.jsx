@@ -1,11 +1,15 @@
 import React, { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import axios, { endpoints } from "../../utils/axiosConfig";
 
 const MedicineGenre = () => {
   const [genres, setGenres] = useState([]);
-  const [searchParams, setSearchParams] = useSearchParams();
-  const selectedGenre = searchParams.get("genre");
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Only show selected state when we're on /medicines page
+  const selectedGenre = location.pathname === '/medicines' ? searchParams.get("genre") : null;
 
   useEffect(() => {
     axios
@@ -19,14 +23,17 @@ const MedicineGenre = () => {
   }, []);
 
   const handleGenreClick = (genreId) => {
-    const newParams = new URLSearchParams(searchParams);
+    const newParams = new URLSearchParams();
     newParams.set("page", "1"); 
+    
     if (selectedGenre === genreId.toString()) {
-      newParams.delete("genre");
+      // If already selected, just go to medicines page without genre filter
+      navigate("/medicines?page=1");
     } else {
+      // Navigate to medicines page with genre filter
       newParams.set("genre", genreId);
+      navigate(`/medicines?${newParams.toString()}`);
     }
-    setSearchParams(newParams);
   };
 
   return (

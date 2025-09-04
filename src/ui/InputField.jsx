@@ -8,7 +8,10 @@ const InputField = ({
   onChange, 
   icon, 
   required = false,
-  className = ""
+  className = "",
+  disabled = false,
+  error = "",
+  name
 }) => {
   return (
     <div className={className}>
@@ -21,13 +24,18 @@ const InputField = ({
         )}
         <input 
           type={type}
-          className="w-full outline-none bg-transparent" 
+          name={name}
+          className={`w-full outline-none bg-transparent ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}
           placeholder={placeholder}
           value={value}
           onChange={onChange}
           required={required}
+          disabled={disabled}
         />
       </div>
+      {error && (
+        <p className="text-red-500 text-sm mt-1">{error}</p>
+      )}
     </div>
   );
 };

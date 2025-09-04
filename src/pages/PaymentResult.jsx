@@ -2,7 +2,7 @@ import React from 'react';
 import Header from '../ui/Header';
 import Footer from '../ui/Footer';
 import Base from '../ui/Base';
-import Spinner from '../ui/Spinner';
+import LoadingSpinner from '../ui/LoadingSpinner';
 import PaymentSuccess from '../features/Payment/PaymentSuccess';
 import PaymentError from '../features/Payment/PaymentError';
 import { usePaymentResult } from '../hooks/usePaymentResult';
@@ -15,7 +15,7 @@ const PaymentResult = () => {
       <div className="min-h-screen bg-gray-50">
         <Header />
         <div className="flex justify-center items-center py-16">
-          <Spinner />
+          <LoadingSpinner message="Đang xử lý kết quả thanh toán..." />
         </div>
         <Footer />
         <Base />

@@ -9,7 +9,9 @@ export const useRegister = () => {
     password: "",
     confirmPassword: "",
     first_name: "",
-    last_name: ""
+    last_name: "",
+    email: "",
+    phone_number: ""
   });
   const [isLoading, setIsLoading] = useState(false);
   
@@ -25,7 +27,7 @@ export const useRegister = () => {
   };
 
   const validateForm = () => {
-    const { username, password, confirmPassword, first_name, last_name } = formData;
+    const { username, password, confirmPassword, first_name, last_name, email, phone_number } = formData;
     
     if (!username.trim()) {
       showError("Vui lòng nhập tên đăng nhập");
@@ -39,6 +41,28 @@ export const useRegister = () => {
     
     if (!last_name.trim()) {
       showError("Vui lòng nhập tên");
+      return false;
+    }
+    
+    if (!email.trim()) {
+      showError("Vui lòng nhập email");
+      return false;
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      showError("Email không hợp lệ");
+      return false;
+    }
+    
+    if (!phone_number.trim()) {
+      showError("Vui lòng nhập số điện thoại");
+      return false;
+    }
+    
+    const phoneRegex = /^\d+$/;
+    if (!phoneRegex.test(phone_number)) {
+      showError("Số điện thoại chỉ được chứa số");
       return false;
     }
     
@@ -65,13 +89,7 @@ export const useRegister = () => {
     try {
       const { confirmPassword, ...registrationData } = formData;
       
-      const dataToSend = {
-        ...registrationData,
-        email: null,
-        phone_number: null
-      };
-      
-      await defaultUserRegister(dataToSend);
+      await defaultUserRegister(registrationData);
       showSuccess("Đăng ký thành công! Vui lòng đăng nhập.");
       
       setTimeout(() => {

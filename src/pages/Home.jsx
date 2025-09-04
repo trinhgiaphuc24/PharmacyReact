@@ -5,10 +5,11 @@ import { Carousel } from 'react-responsive-carousel';
 import "react-responsive-carousel/lib/styles/carousel.min.css";
 import Header from '../ui/Header';
 import MedicineGenre from '../features/MedicineGenre/MedicineGenre';
-import MedicineList from '../features/Medicine/MedicineList';
+import HomeMedicineList from '../features/Medicine/HomeMedicineList';
 import Footer from '../ui/Footer';
 import Base from '../ui/Base';
-import Spinner from '../ui/Spinner';
+import LoadingSpinner from '../ui/LoadingSpinner';
+import { useBestSellingMedicines } from '../hooks/useBestSellingMedicines';
 
 
 const Home = () => {
@@ -17,18 +18,25 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
   const location = useLocation();
 
+  // Fetch best selling medicines
+  const { bestSellingMedicines, loading: medicinesLoading, error } = useBestSellingMedicines();
+
   useEffect(() => {
     setLoading(true);
     const timer = setTimeout(() => setLoading(false), 1000);
     return () => clearTimeout(timer);
   }, [location.pathname]);
 
-  if (loading) {
+  if (loading || medicinesLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <Spinner />
+        <LoadingSpinner message="Đang tải trang chủ..." />
       </div>
     );
+  }
+
+  if (error) {
+    console.error('Error loading best selling medicines:', error);
   }
 
   return (
@@ -95,7 +103,13 @@ const Home = () => {
           <MedicineGenre />
           {/* Medicine Grid Section */}
           <h2 className="text-xl font-semibold mb-4 text-gray-800">Thuốc bán chạy</h2>
-          <MedicineList/>
+          {error ? (
+            <div className="text-center py-8 text-red-600">
+              {error}
+            </div>
+          ) : (
+            <HomeMedicineList medicines={bestSellingMedicines} />
+          )}
         </div>
       </div>
       {/* Footer */}
